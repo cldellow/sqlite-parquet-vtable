@@ -1,0 +1,3 @@
+.load ./libparquet
+create virtual table parquet using parquet(filename='../csv.csv');
+select * from parquet;

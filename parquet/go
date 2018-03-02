@@ -1,0 +1,1 @@
+./make && ../sqlite/sqlite3 -init ./cmds.txt < /dev/null

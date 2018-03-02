@@ -1,0 +1,25 @@
+#!/bin/bash
+
+set -x
+
+PARQUET_CPP=${PARQUET_CPP:-~/src/parquet-cpp}
+
+# make obj file
+clean() {
+  rm -f *.o *.so
+}
+
+build() {
+  clean
+  g++ -std=c++11 -Wall -fPIC -c -g parquet.cc -I ../sqlite -lz -ldl -lpthread 
+
+  g++ -shared -o libparquet.so parquet.o \
+    ${PARQUET_CPP}/build/release/libparquet.a \
+    ${PARQUET_CPP}/thrift_ep/src/thrift_ep-install/lib/libthrift.a \
+    ${PARQUET_CPP}/build/release/libarrow.so \
+    /usr/lib/x86_64-linux-gnu/libboost_regex.so
+}
+
+fn=${1:-build}
+
+"$fn"
