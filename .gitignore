@@ -30,3 +30,10 @@
 *.exe
 *.out
 *.app
+
+# vim
+*.swp
+
+# transient sqlite files
+/sqlite
+/sqlite-autoconf*

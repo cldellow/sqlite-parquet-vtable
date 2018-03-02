@@ -1,0 +1,30 @@
+#!/bin/bash
+set -euo pipefail
+
+VERSION=3220000
+
+fetch_if_needed() {
+  if [ ! -e sqlite ]; then
+    curl --fail "https://sqlite.org/2018/sqlite-autoconf-${VERSION}.tar.gz" > sqlite.tar.gz
+    tar xf sqlite.tar.gz
+    rm sqlite.tar.gz
+    ln -s sqlite-autoconf-${VERSION} sqlite
+  fi
+}
+
+build() {
+  cd sqlite
+  ./configure
+  make
+}
+
+main() {
+  here=$(dirname "${BASH_SOURCE[0]}")
+  here=$(readlink -f "$here")
+  cd "$here"
+
+  fetch_if_needed
+  build
+}
+
+main "$@"
