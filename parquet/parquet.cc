@@ -1,43 +1,13 @@
 /*
-** 2016-05-28
-**
-** The author disclaims copyright to this source code.  In place of
-** a legal notice, here is a blessing:
-**
-**    May you do good and not evil.
-**    May you find forgiveness for yourself and forgive others.
-**    May you share freely, never taking more than you give.
-**
-******************************************************************************
-**
-** This file contains the implementation of an SQLite virtual table for
-** reading CSV files.
-**
-** Usage:
-**
-**    .load ./csv
-**    CREATE VIRTUAL TABLE temp.csv USING csv(filename=FILENAME);
-**    SELECT * FROM csv;
-**
-** The columns are named "c1", "c2", "c3", ... by default.  But the
-** application can define its own CREATE TABLE statement as an additional
-** parameter.  For example:
-**
-**    CREATE VIRTUAL TABLE temp.csv2 USING csv(
-**       filename = "../http.log",
-**       schema = "CREATE TABLE x(date,ipaddr,url,referrer,userAgent)"
-**    );
-**
-** Instead of specifying a file, the text of the CSV can be loaded using
-** the data= parameter.
-**
-** If the columns=N parameter is supplied, then the CSV file is assumed to have
-** N columns.  If the columns parameter is omitted, the CSV file is opened
-** as soon as the virtual table is constructed and the first row of the CSV
-** is read in order to count the tables.
-**
-** Some extra debugging features (used for testing virtual tables) are available
-** if this module is compiled with -DSQLITE_TEST.
+* This file contains the implementation of an SQLite virtual table for
+* reading Parquet files.
+*
+* Usage:
+*
+*    .load ./parquet
+*    CREATE VIRTUAL TABLE demo USING parquet(FILENAME);
+*    SELECT * FROM demo;
+*
 */
 #include <sqlite3ext.h>
 SQLITE_EXTENSION_INIT1
@@ -51,19 +21,6 @@ SQLITE_EXTENSION_INIT1
 #include "parquet/api/reader.h"
 
 char const *EMPTY_STRING = "";
-#ifndef SQLITE_OMIT_VIRTUALTABLE
-
-/*
-** A macro to hint to the compiler that a function should not be
-** inlined.
-*/
-#if defined(__GNUC__)
-#  define CSV_NOINLINE  __attribute__((noinline))
-#elif defined(_MSC_VER) && _MSC_VER>=1310
-#  define CSV_NOINLINE  __declspec(noinline)
-#else
-#  define CSV_NOINLINE
-#endif
 
 void gogo() {
   printf("ok");
@@ -78,15 +35,15 @@ void gogo() {
 }
 
 /* Max size of the error message in a CsvReader */
-#define CSV_MXERR 200
+#define PARQUET_MXERR 200
 
 /* Size of the CsvReader input buffer */
-#define CSV_INBUFSZ 1024
+#define PARQUET_INBUFSZ 1024
 
-/* A context object used when read a CSV file. */
+/* A context object used when read a Parquet file. */
 typedef struct CsvReader CsvReader;
 struct CsvReader {
-  FILE *in;              /* Read the CSV text from this input stream */
+  FILE *in;              /* Read the Parquet text from this input stream */
   char *z;               /* Accumulated text for a field */
   int n;                 /* Number of bytes in z */
   int nAlloc;            /* Space allocated for z[] */
@@ -96,7 +53,7 @@ struct CsvReader {
   size_t iIn;            /* Next unread character in the input buffer */
   size_t nIn;            /* Number of characters in the input buffer */
   char *zIn;             /* The input buffer */
-  char zErr[CSV_MXERR];  /* Error message */
+  char zErr[PARQUET_MXERR];  /* Error message */
 };
 
 /* Initialize a CsvReader object */
@@ -126,7 +83,7 @@ static void csv_reader_reset(CsvReader *p){
 static void csv_errmsg(CsvReader *p, const char *zFormat, ...){
   va_list ap;
   va_start(ap, zFormat);
-  sqlite3_vsnprintf(CSV_MXERR, p->zErr, zFormat, ap);
+  sqlite3_vsnprintf(PARQUET_MXERR, p->zErr, zFormat, ap);
   va_end(ap);
 }
 
@@ -139,7 +96,7 @@ static int csv_reader_open(
   const char *zData           /*  ... or use this data */
 ){
   if( zFilename ){
-    p->zIn = (char*)sqlite3_malloc( CSV_INBUFSZ );
+    p->zIn = (char*)sqlite3_malloc( PARQUET_INBUFSZ );
     if( p->zIn==0 ){
       csv_errmsg(p, "out of memory");
       return 1;
@@ -161,13 +118,13 @@ static int csv_reader_open(
 /* The input buffer has overflowed.  Refill the input buffer, then
 ** return the next character
 */
-static CSV_NOINLINE int csv_getc_refill(CsvReader *p){
+static int csv_getc_refill(CsvReader *p){
   size_t got;
 
   assert( p->iIn>=p->nIn );  /* Only called on an empty input buffer */
   assert( p->in!=0 );        /* Only called if reading froma file */
 
-  got = fread(p->zIn, 1, CSV_INBUFSZ, p->in);
+  got = fread(p->zIn, 1, PARQUET_INBUFSZ, p->in);
   if( got==0 ) return EOF;
   p->nIn = got;
   p->iIn = 1;
@@ -185,7 +142,7 @@ static int csv_getc(CsvReader *p){
 
 /* Increase the size of p->z and append character c to the end. 
 ** Return 0 on success and non-zero if there is an OOM error */
-static CSV_NOINLINE int csv_resize_and_append(CsvReader *p, char c){
+static int csv_resize_and_append(CsvReader *p, char c){
   char *zNew;
   int nNew = p->nAlloc*2 + 100;
   zNew = (char*)sqlite3_realloc64(p->z, nNew);
@@ -208,7 +165,7 @@ static int csv_append(CsvReader *p, char c){
   return 0;
 }
 
-/* Read a single field of CSV text.  Compatible with rfc4180 and extended
+/* Read a single field of Parquet text.  Compatible with rfc4180 and extended
 ** with the option of having a separator other than ",".
 **
 **   +  Input comes from p->in.
@@ -300,54 +257,52 @@ static const char *csv_read_one_field(CsvReader *p){
 
 /* Forward references to the various virtual table methods implemented
 ** in this file. */
-static int csvtabCreate(sqlite3*, void*, int, const char*const*, 
+static int parquetCreate(sqlite3*, void*, int, const char*const*, 
                            sqlite3_vtab**,char**);
-static int csvtabConnect(sqlite3*, void*, int, const char*const*, 
+static int parquetConnect(sqlite3*, void*, int, const char*const*, 
                            sqlite3_vtab**,char**);
-static int csvtabBestIndex(sqlite3_vtab*,sqlite3_index_info*);
-static int csvtabDisconnect(sqlite3_vtab*);
-static int csvtabOpen(sqlite3_vtab*, sqlite3_vtab_cursor**);
-static int csvtabClose(sqlite3_vtab_cursor*);
-static int csvtabFilter(sqlite3_vtab_cursor*, int idxNum, const char *idxStr,
+static int parquetBestIndex(sqlite3_vtab*,sqlite3_index_info*);
+static int parquetDisconnect(sqlite3_vtab*);
+static int parquetOpen(sqlite3_vtab*, sqlite3_vtab_cursor**);
+static int parquetClose(sqlite3_vtab_cursor*);
+static int parquetFilter(sqlite3_vtab_cursor*, int idxNum, const char *idxStr,
                           int argc, sqlite3_value **argv);
-static int csvtabNext(sqlite3_vtab_cursor*);
-static int csvtabEof(sqlite3_vtab_cursor*);
-static int csvtabColumn(sqlite3_vtab_cursor*,sqlite3_context*,int);
-static int csvtabRowid(sqlite3_vtab_cursor*,sqlite3_int64*);
+static int parquetNext(sqlite3_vtab_cursor*);
+static int parquetEof(sqlite3_vtab_cursor*);
+static int parquetColumn(sqlite3_vtab_cursor*,sqlite3_context*,int);
+static int parquetRowid(sqlite3_vtab_cursor*,sqlite3_int64*);
 
-/* An instance of the CSV virtual table */
-typedef struct CsvTable {
+/* An instance of the Parquet virtual table */
+typedef struct ParquetTable {
   sqlite3_vtab base;              /* Base class.  Must be first */
-  char *zFilename;                /* Name of the CSV file */
-  char *zData;                    /* Raw CSV data in lieu of zFilename */
+  char *zFilename;                /* Name of the Parquet file */
+  char *zData;                    /* Raw Parquet data in lieu of zFilename */
   long iStart;                    /* Offset to start of data in zFilename */
-  unsigned int nCol;                       /* Number of columns in the CSV file */
+  unsigned int nCol;                       /* Number of columns in the Parquet file */
   unsigned int tstFlags;          /* Bit values used for testing */
-} CsvTable;
+} ParquetTable;
 
-/* Allowed values for tstFlags */
-#define CSVTEST_FIDX  0x0001      /* Pretend that constrained searchs cost less*/
 
-/* A cursor for the CSV virtual table */
-typedef struct CsvCursor {
+/* A cursor for the Parquet virtual table */
+typedef struct ParquetCursor {
   sqlite3_vtab_cursor base;       /* Base class.  Must be first */
   CsvReader rdr;                  /* The CsvReader object */
   char **azVal;                   /* Value of the current row */
   int *aLen;                      /* Length of each entry */
   sqlite3_int64 iRowid;           /* The current rowid.  Negative for EOF */
-} CsvCursor;
+} ParquetCursor;
 
-/* Transfer error message text from a reader into a CsvTable */
-static void csv_xfer_error(CsvTable *pTab, CsvReader *pRdr){
+/* Transfer error message text from a reader into a ParquetTable */
+static void csv_xfer_error(ParquetTable *pTab, CsvReader *pRdr){
   sqlite3_free(pTab->base.zErrMsg);
   pTab->base.zErrMsg = sqlite3_mprintf("%s", pRdr->zErr);
 }
 
 /*
-** This method is the destructor fo a CsvTable object.
+** This method is the destructor fo a ParquetTable object.
 */
-static int csvtabDisconnect(sqlite3_vtab *pVtab){
-  CsvTable *p = (CsvTable*)pVtab;
+static int parquetDisconnect(sqlite3_vtab *pVtab){
+  ParquetTable *p = (ParquetTable*)pVtab;
   sqlite3_free(p->zFilename);
   sqlite3_free(p->zData);
   sqlite3_free(p);
@@ -451,23 +406,20 @@ static int csv_boolean(const char *z){
 
 /*
 ** Parameters:
-**    filename=FILENAME          Name of file containing CSV content
-**    data=TEXT                  Direct CSV content.
-**    schema=SCHEMA              Alternative CSV schema.
-**    header=YES|NO              First row of CSV defines the names of
+**    filename=FILENAME          Name of file containing Parquet content
+**    data=TEXT                  Direct Parquet content.
+**    schema=SCHEMA              Alternative Parquet schema.
+**    header=YES|NO              First row of Parquet defines the names of
 **                               columns if "yes".  Default "no".
-**    columns=N                  Assume the CSV file contains N columns.
+**    columns=N                  Assume the Parquet file contains N columns.
 **
-** Only available if compiled with SQLITE_TEST:
-**    
-**    testflags=N                Bitmask of test flags.  Optional
 **
 ** If schema= is omitted, then the columns are named "c0", "c1", "c2",
 ** and so forth.  If columns=N is omitted, then the file is opened and
 ** the number of columns in the first row is counted to determine the
 ** column count.  If header=YES, then the first row is skipped.
 */
-static int csvtabConnect(
+static int parquetConnect(
   sqlite3 *db,
   void *pAux,
   int argcOrig, const char *const*argv,
@@ -475,23 +427,20 @@ static int csvtabConnect(
   char **pzErr
 ){
   unsigned int argc = argcOrig;
-  CsvTable *pNew = 0;        /* The CsvTable object to construct */
+  ParquetTable *pNew = 0;        /* The ParquetTable object to construct */
   int bHeader = -1;          /* header= flags.  -1 means not seen yet */
   int rc = SQLITE_OK;        /* Result code from this routine */
   unsigned int i, j;                  /* Loop counters */
-#ifdef SQLITE_TEST
-  int tstFlags = 0;          /* Value for testflags=N parameter */
-#endif
   int nCol = -99;            /* Value of the columns= parameter */
-  CsvReader sRdr;            /* A CSV file reader used to store an error
+  CsvReader sRdr;            /* A Parquet file reader used to store an error
                              ** message and/or to count the number of columns */
   static const char *azParam[] = {
      "filename", "data", "schema", 
   };
   char *azPValue[3];         /* Parameter values */
-# define CSV_FILENAME (azPValue[0])
-# define CSV_DATA     (azPValue[1])
-# define CSV_SCHEMA   (azPValue[2])
+# define PARQUET_FILENAME (azPValue[0])
+# define PARQUET_DATA     (azPValue[1])
+# define PARQUET_SCHEMA   (azPValue[2])
 
 
   assert( sizeof(azPValue)==sizeof(azParam) );
@@ -504,13 +453,13 @@ static int csvtabConnect(
       if( csv_string_parameter(&sRdr, azParam[j], z, &azPValue[j]) ) break;
     }
     if( j<sizeof(azParam)/sizeof(azParam[0]) ){
-      if( sRdr.zErr[0] ) goto csvtab_connect_error;
+      if( sRdr.zErr[0] ) goto parquet_connect_error;
     }else
     if( (zValue = csv_parameter("header",6,z))!=0 ){
       int x;
       if( bHeader>=0 ){
         csv_errmsg(&sRdr, "more than one 'header' parameter");
-        goto csvtab_connect_error;
+        goto parquet_connect_error;
       }
       x = csv_boolean(zValue);
       if( x==1 ){
@@ -519,80 +468,72 @@ static int csvtabConnect(
         bHeader = 0;
       }else{
         csv_errmsg(&sRdr, "unrecognized argument to 'header': %s", zValue);
-        goto csvtab_connect_error;
+        goto parquet_connect_error;
       }
     }else
-#ifdef SQLITE_TEST
-    if( (zValue = csv_parameter("testflags",9,z))!=0 ){
-      tstFlags = (unsigned int)atoi(zValue);
-    }else
-#endif
     if( (zValue = csv_parameter("columns",7,z))!=0 ){
       if( nCol>0 ){
         csv_errmsg(&sRdr, "more than one 'columns' parameter");
-        goto csvtab_connect_error;
+        goto parquet_connect_error;
       }
       nCol = atoi(zValue);
       if( nCol<=0 ){
         csv_errmsg(&sRdr, "must have at least one column");
-        goto csvtab_connect_error;
+        goto parquet_connect_error;
       }
     }else
     {
       csv_errmsg(&sRdr, "unrecognized parameter '%s'", z);
-      goto csvtab_connect_error;
+      goto parquet_connect_error;
     }
   }
-  if( (CSV_FILENAME==0)==(CSV_DATA==0) ){
+  if( (PARQUET_FILENAME==0)==(PARQUET_DATA==0) ){
     csv_errmsg(&sRdr, "must either filename= or data= but not both");
-    goto csvtab_connect_error;
+    goto parquet_connect_error;
   }
-  if( nCol<=0 && csv_reader_open(&sRdr, CSV_FILENAME, CSV_DATA) ){
-    goto csvtab_connect_error;
+  if( nCol<=0 && csv_reader_open(&sRdr, PARQUET_FILENAME, PARQUET_DATA) ){
+    goto parquet_connect_error;
   }
-  pNew = (CsvTable*)sqlite3_malloc( sizeof(*pNew) );
+  pNew = (ParquetTable*)sqlite3_malloc( sizeof(*pNew) );
   *ppVtab = (sqlite3_vtab*)pNew;
-  if( pNew==0 ) goto csvtab_connect_oom;
+  if( pNew==0 ) goto parquet_connect_oom;
   memset(pNew, 0, sizeof(*pNew));
   if( nCol>0 ){
     pNew->nCol = nCol;
   }else{
     do{
       const char *z = csv_read_one_field(&sRdr);
-      if( z==0 ) goto csvtab_connect_oom;
+      if( z==0 ) goto parquet_connect_oom;
       pNew->nCol++;
     }while( sRdr.cTerm==',' );
   }
-  pNew->zFilename = CSV_FILENAME;  CSV_FILENAME = 0;
-  pNew->zData = CSV_DATA;          CSV_DATA = 0;
-#ifdef SQLITE_TEST
-  pNew->tstFlags = tstFlags;
-#endif
+  pNew->zFilename = PARQUET_FILENAME;  PARQUET_FILENAME = 0;
+  pNew->zData = PARQUET_DATA;          PARQUET_DATA = 0;
   pNew->iStart = bHeader==1 ? ftell(sRdr.in) : 0;
   csv_reader_reset(&sRdr);
-  if( CSV_SCHEMA==0 ){
+  if( PARQUET_SCHEMA==0 ){
     const char *zSep = EMPTY_STRING;
-    CSV_SCHEMA = sqlite3_mprintf("CREATE TABLE x(");
-    if( CSV_SCHEMA==0 ) goto csvtab_connect_oom;
+    PARQUET_SCHEMA = sqlite3_mprintf("CREATE TABLE x(");
+    if( PARQUET_SCHEMA==0 ) goto parquet_connect_oom;
     for(i=0; i<pNew->nCol; i++){
-      CSV_SCHEMA = sqlite3_mprintf("%z%sc%d TEXT",CSV_SCHEMA, zSep, i);
+      PARQUET_SCHEMA = sqlite3_mprintf("%z%sc%d TEXT",PARQUET_SCHEMA, zSep, i);
       zSep = ",";
     }
-    CSV_SCHEMA = sqlite3_mprintf("%z);", CSV_SCHEMA);
+    PARQUET_SCHEMA = sqlite3_mprintf("%z);", PARQUET_SCHEMA);
   }
-  rc = sqlite3_declare_vtab(db, CSV_SCHEMA);
-  if( rc ) goto csvtab_connect_error;
+  rc = sqlite3_declare_vtab(db, PARQUET_SCHEMA);
+  if( rc ) goto parquet_connect_error;
   for(i=0; i<sizeof(azPValue)/sizeof(azPValue[0]); i++){
     sqlite3_free(azPValue[i]);
   }
   return SQLITE_OK;
 
-csvtab_connect_oom:
+parquet_connect_oom:
   rc = SQLITE_NOMEM;
   csv_errmsg(&sRdr, "out of memory");
 
-csvtab_connect_error:
-  if( pNew ) csvtabDisconnect(&pNew->base);
+parquet_connect_error:
+  if( pNew ) parquetDisconnect(&pNew->base);
   for(i=0; i<sizeof(azPValue)/sizeof(azPValue[0]); i++){
     sqlite3_free(azPValue[i]);
   }
@@ -606,10 +547,10 @@ csvtab_connect_error:
 }
 
 /*
-** Reset the current row content held by a CsvCursor.
+** Reset the current row content held by a ParquetCursor.
 */
-static void csvtabCursorRowReset(CsvCursor *pCur){
-  CsvTable *pTab = (CsvTable*)pCur->base.pVtab;
+static void parquetCursorRowReset(ParquetCursor *pCur){
+  ParquetTable *pTab = (ParquetTable*)pCur->base.pVtab;
   unsigned int i;
   for(i=0; i<pTab->nCol; i++){
     sqlite3_free(pCur->azVal[i]);
@@ -622,36 +563,36 @@ static void csvtabCursorRowReset(CsvCursor *pCur){
 ** The xConnect and xCreate methods do the same thing, but they must be
 ** different so that the virtual table is not an eponymous virtual table.
 */
-static int csvtabCreate(
+static int parquetCreate(
   sqlite3 *db,
   void *pAux,
   int argc, const char *const*argv,
   sqlite3_vtab **ppVtab,
   char **pzErr
 ){
- return csvtabConnect(db, pAux, argc, argv, ppVtab, pzErr);
+ return parquetConnect(db, pAux, argc, argv, ppVtab, pzErr);
 }
 
 /*
-** Destructor for a CsvCursor.
+** Destructor for a ParquetCursor.
 */
-static int csvtabClose(sqlite3_vtab_cursor *cur){
-  CsvCursor *pCur = (CsvCursor*)cur;
-  csvtabCursorRowReset(pCur);
+static int parquetClose(sqlite3_vtab_cursor *cur){
+  ParquetCursor *pCur = (ParquetCursor*)cur;
+  parquetCursorRowReset(pCur);
   csv_reader_reset(&pCur->rdr);
   sqlite3_free(cur);
   return SQLITE_OK;
 }
 
 /*
-** Constructor for a new CsvTable cursor object.
+** Constructor for a new ParquetTable cursor object.
 */
-static int csvtabOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor){
-  CsvTable *pTab = (CsvTable*)p;
-  CsvCursor *pCur;
+static int parquetOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor){
+  ParquetTable *pTab = (ParquetTable*)p;
+  ParquetCursor *pCur;
   size_t nByte;
   nByte = sizeof(*pCur) + (sizeof(char*)+sizeof(int))*pTab->nCol;
-  pCur = (CsvCursor*)sqlite3_malloc64( nByte );
+  pCur = (ParquetCursor*)sqlite3_malloc64( nByte );
   if( pCur==0 ) return SQLITE_NOMEM;
   memset(pCur, 0, nByte);
   pCur->azVal = (char**)&pCur[1];
@@ -666,12 +607,12 @@ static int csvtabOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor){
 
 
 /*
-** Advance a CsvCursor to its next row of input.
+** Advance a ParquetCursor to its next row of input.
 ** Set the EOF marker if we reach the end of input.
 */
-static int csvtabNext(sqlite3_vtab_cursor *cur){
-  CsvCursor *pCur = (CsvCursor*)cur;
-  CsvTable *pTab = (CsvTable*)cur->pVtab;
+static int parquetNext(sqlite3_vtab_cursor *cur){
+  ParquetCursor *pCur = (ParquetCursor*)cur;
+  ParquetTable *pTab = (ParquetTable*)cur->pVtab;
   unsigned int i = 0;
   const char *z;
   do{
@@ -710,17 +651,17 @@ static int csvtabNext(sqlite3_vtab_cursor *cur){
 }
 
 /*
-** Return values of columns for the row at which the CsvCursor
+** Return values of columns for the row at which the ParquetCursor
 ** is currently pointing.
 */
-static int csvtabColumn(
+static int parquetColumn(
   sqlite3_vtab_cursor *cur,   /* The cursor */
   sqlite3_context *ctx,       /* First argument to sqlite3_result_...() */
   int iOrig                       /* Which column to return */
 ){
   unsigned int i = iOrig;
-  CsvCursor *pCur = (CsvCursor*)cur;
-  CsvTable *pTab = (CsvTable*)cur->pVtab;
+  ParquetCursor *pCur = (ParquetCursor*)cur;
+  ParquetTable *pTab = (ParquetTable*)cur->pVtab;
   if( i>=0 && i<pTab->nCol && pCur->azVal[i]!=0 ){
     sqlite3_result_text(ctx, pCur->azVal[i], -1, SQLITE_STATIC);
   }
@@ -730,8 +671,8 @@ static int csvtabColumn(
 /*
 ** Return the rowid for the current row.
 */
-static int csvtabRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid){
-  CsvCursor *pCur = (CsvCursor*)cur;
+static int parquetRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid){
+  ParquetCursor *pCur = (ParquetCursor*)cur;
   *pRowid = pCur->iRowid;
   return SQLITE_OK;
 }
@@ -740,8 +681,8 @@ static int csvtabRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid){
 ** Return TRUE if the cursor has been moved off of the last
 ** row of output.
 */
-static int csvtabEof(sqlite3_vtab_cursor *cur){
-  CsvCursor *pCur = (CsvCursor*)cur;
+static int parquetEof(sqlite3_vtab_cursor *cur){
+  ParquetCursor *pCur = (ParquetCursor*)cur;
   return pCur->iRowid<0;
 }
 
@@ -749,13 +690,13 @@ static int csvtabEof(sqlite3_vtab_cursor *cur){
 ** Only a full table scan is supported.  So xFilter simply rewinds to
 ** the beginning.
 */
-static int csvtabFilter(
+static int parquetFilter(
   sqlite3_vtab_cursor *pVtabCursor, 
   int idxNum, const char *idxStr,
   int argc, sqlite3_value **argv
 ){
-  CsvCursor *pCur = (CsvCursor*)pVtabCursor;
-  CsvTable *pTab = (CsvTable*)pVtabCursor->pVtab;
+  ParquetCursor *pCur = (ParquetCursor*)pVtabCursor;
+  ParquetTable *pTab = (ParquetTable*)pVtabCursor->pVtab;
   pCur->iRowid = 0;
   if( pCur->rdr.in==0 ){
     assert( pCur->rdr.zIn==pTab->zData );
@@ -767,68 +708,36 @@ static int csvtabFilter(
     pCur->rdr.iIn = 0;
     pCur->rdr.nIn = 0;
   }
-  return csvtabNext(pVtabCursor);
+  return parquetNext(pVtabCursor);
 }
 
 /*
-** Only a forward full table scan is supported.  xBestIndex is mostly
-** a no-op.  If CSVTEST_FIDX is set, then the presence of equality
-** constraints lowers the estimated cost, which is fiction, but is useful
-** for testing certain kinds of virtual table behavior.
+* Only a forward full table scan is supported.  xBestIndex is mostly
+* a no-op.
 */
-static int csvtabBestIndex(
+static int parquetBestIndex(
   sqlite3_vtab *tab,
   sqlite3_index_info *pIdxInfo
 ){
   pIdxInfo->estimatedCost = 1000000;
-#ifdef SQLITE_TEST
-  if( (((CsvTable*)tab)->tstFlags & CSVTEST_FIDX)!=0 ){
-    /* The usual (and sensible) case is to always do a full table scan.
-    ** The code in this branch only runs when testflags=1.  This code
-    ** generates an artifical and unrealistic plan which is useful
-    ** for testing virtual table logic but is not helpful to real applications.
-    **
-    ** Any ==, LIKE, or GLOB constraint is marked as usable by the virtual
-    ** table (even though it is not) and the cost of running the virtual table
-    ** is reduced from 1 million to just 10.  The constraints are *not* marked
-    ** as omittable, however, so the query planner should still generate a
-    ** plan that gives a correct answer, even if they plan is not optimal.
-    */
-    int i;
-    int nConst = 0;
-    for(i=0; i<pIdxInfo->nConstraint; i++){
-      unsigned char op;
-      if( pIdxInfo->aConstraint[i].usable==0 ) continue;
-      op = pIdxInfo->aConstraint[i].op;
-      if( op==SQLITE_INDEX_CONSTRAINT_EQ 
-       || op==SQLITE_INDEX_CONSTRAINT_LIKE
-       || op==SQLITE_INDEX_CONSTRAINT_GLOB
-      ){
-        pIdxInfo->estimatedCost = 10;
-        pIdxInfo->aConstraintUsage[nConst].argvIndex = nConst+1;
-        nConst++;
-      }
-    }
-  }
-#endif
   return SQLITE_OK;
 }
 
 
-static sqlite3_module CsvModule = {
+static sqlite3_module ParquetModule = {
   0,                       /* iVersion */
-  csvtabCreate,            /* xCreate */
-  csvtabConnect,           /* xConnect */
-  csvtabBestIndex,         /* xBestIndex */
-  csvtabDisconnect,        /* xDisconnect */
-  csvtabDisconnect,        /* xDestroy */
-  csvtabOpen,              /* xOpen - open a cursor */
-  csvtabClose,             /* xClose - close a cursor */
-  csvtabFilter,            /* xFilter - configure scan constraints */
-  csvtabNext,              /* xNext - advance a cursor */
-  csvtabEof,               /* xEof - check for end of scan */
-  csvtabColumn,            /* xColumn - read data */
-  csvtabRowid,             /* xRowid - read data */
+  parquetCreate,            /* xCreate */
+  parquetConnect,           /* xConnect */
+  parquetBestIndex,         /* xBestIndex */
+  parquetDisconnect,        /* xDisconnect */
+  parquetDisconnect,        /* xDestroy */
+  parquetOpen,              /* xOpen - open a cursor */
+  parquetClose,             /* xClose - close a cursor */
+  parquetFilter,            /* xFilter - configure scan constraints */
+  parquetNext,              /* xNext - advance a cursor */
+  parquetEof,               /* xEof - check for end of scan */
+  parquetColumn,            /* xColumn - read data */
+  parquetRowid,             /* xRowid - read data */
   0,                       /* xUpdate */
   0,                       /* xBegin */
   0,                       /* xSync */
@@ -838,49 +747,10 @@ static sqlite3_module CsvModule = {
   0,                       /* xRename */
 };
 
-#ifdef SQLITE_TEST
-/*
-** For virtual table testing, make a version of the CSV virtual table
-** available that has an xUpdate function.  But the xUpdate always returns
-** SQLITE_READONLY since the CSV file is not really writable.
-*/
-static int csvtabUpdate(sqlite3_vtab *p,int n,sqlite3_value**v,sqlite3_int64*x){
-  return SQLITE_READONLY;
-}
-static sqlite3_module CsvModuleFauxWrite = {
-  0,                       /* iVersion */
-  csvtabCreate,            /* xCreate */
-  csvtabConnect,           /* xConnect */
-  csvtabBestIndex,         /* xBestIndex */
-  csvtabDisconnect,        /* xDisconnect */
-  csvtabDisconnect,        /* xDestroy */
-  csvtabOpen,              /* xOpen - open a cursor */
-  csvtabClose,             /* xClose - close a cursor */
-  csvtabFilter,            /* xFilter - configure scan constraints */
-  csvtabNext,              /* xNext - advance a cursor */
-  csvtabEof,               /* xEof - check for end of scan */
-  csvtabColumn,            /* xColumn - read data */
-  csvtabRowid,             /* xRowid - read data */
-  csvtabUpdate,            /* xUpdate */
-  0,                       /* xBegin */
-  0,                       /* xSync */
-  0,                       /* xCommit */
-  0,                       /* xRollback */
-  0,                       /* xFindMethod */
-  0,                       /* xRename */
-};
-#endif /* SQLITE_TEST */
-
-#endif /* !defined(SQLITE_OMIT_VIRTUALTABLE) */
-
-
-#ifdef _WIN32
-__declspec(dllexport)
-#endif
 /* 
-** This routine is called when the extension is loaded.  The new
-** CSV virtual table module is registered with the calling database
-** connection.
+* This routine is called when the extension is loaded.  The new
+* Parquet virtual table module is registered with the calling database
+* connection.
 */
 extern "C" {
   int sqlite3_parquet_init(
@@ -888,22 +758,9 @@ extern "C" {
     char **pzErrMsg, 
     const sqlite3_api_routines *pApi
   ){
-#ifndef SQLITE_OMIT_VIRTUALTABLE	
     int rc;
     SQLITE_EXTENSION_INIT2(pApi);
-    printf("foo!!!\n");
-    gogo();
-    rc = sqlite3_create_module(db, "parquet", &CsvModule, 0);
-#ifdef SQLITE_TEST
-    if( rc==SQLITE_OK ){
-      rc = sqlite3_create_module(db, "csv_wr", &CsvModuleFauxWrite, 0);
-    }
-#endif
+    rc = sqlite3_create_module(db, "parquet", &ParquetModule, 0);
     return rc;
-#else
-    return SQLITE_OK;
-#endif
   }
 }
-
-
