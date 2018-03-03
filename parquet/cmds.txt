@@ -1,3 +1,19 @@
 .load ./libparquet
-create virtual table parquet using parquet(filename='../csv.csv');
-select * from parquet;
+select 'creating without enough args';
+create virtual table noargs using parquet;
+
+select 'creating with invalid file';
+create virtual table nonexistent using parquet('nonexistent');
+
+select 'creating with valid file';
+create virtual table parquet using parquet('/home/cldellow/src/csv2parquet/12m.parquet.snappy');
+.tables
+.schema parquet
+.timer on
+.headers on
+select count(*) from (select * from parquet limit 1);
+select rowid,col0 from parquet where rowid > 5 limit 5;
+select count(*) from parquet limit 1;
+select sum(col0) from parquet limit 1;
+select * from parquet limit 10;
+select sum(length(col3)) from parquet;

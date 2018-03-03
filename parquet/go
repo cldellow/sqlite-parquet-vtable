@@ -1,1 +1,12 @@
-./make && ../sqlite/sqlite3 -init ./cmds.txt < /dev/null
+#!/bin/bash
+
+set -euo pipefail
+./make
+
+
+if [ ! -v DEBUG ]; then
+  ../sqlite/sqlite3 -init ./cmds.txt < /dev/null
+else
+  gdb -ex run --args ../sqlite/sqlite3 -init ./cmds.txt
+fi
+

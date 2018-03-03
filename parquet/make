@@ -1,6 +1,7 @@
 #!/bin/bash
 
-set -x
+set -euo pipefail
+#set -x
 
 PARQUET_CPP=${PARQUET_CPP:-~/src/parquet-cpp}
 
@@ -11,9 +12,10 @@ clean() {
 
 build() {
   clean
-  g++ -std=c++11 -Wall -fPIC -c -g parquet.cc -I ../sqlite -lz -ldl -lpthread 
+  # -O3 -s -DNDEBUG
+  g++ -O3 -std=c++11 -Wall -fPIC -c -g *.cc -I ../sqlite -lz -ldl -lpthread 
 
-  g++ -shared -o libparquet.so parquet.o \
+  g++ -O3 -shared -o libparquet.so *.o \
     ${PARQUET_CPP}/build/release/libparquet.a \
     ${PARQUET_CPP}/thrift_ep/src/thrift_ep-install/lib/libthrift.a \
     ${PARQUET_CPP}/build/release/libarrow.so \
