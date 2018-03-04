@@ -25,8 +25,8 @@ and may be good enough for yours, too.
 ```
 $ sqlite/sqlite3
 sqlite> .load parquet/libparquet
-sqlite> create virtual table demo USING parquet('demo.parquet');
-sqlite> select * from demo limit 1;
+sqlite> CREATE VIRTUAL TABLE demo USING parquet('parquet-generator/100-rows-1.parquet');
+sqlite> SELECT * FROM demo;
 ...if all goes well, you'll see data here!...
 ```
 
