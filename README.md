@@ -4,13 +4,14 @@ A SQLite [virtual table](https://sqlite.org/vtab.html) extension to expose Parqu
 
 ## Caveats
 
-I'm not a professional C/C++ programmer. These are the caveats I'm aware of, but there are probably others:
+I'm not an experienced C/C++ programmer. This library is definitely not bombproof. It's good enough for my use case,
+and may be good enough for yours, too.
 
 * I don't use `sqlite3_malloc` and `sqlite3_free` for C++ objects
   * Maybe this doesn't matter, since portability isn't a goal
-* The C (SQLite API implementation) -> C++ interop (to talk to parquet-cpp) probably leaks some C++ exceptions
-  * Your process may crash due to my error. Sorry!
-  * I handle the obvious cases like file not found and unsupported Parquet types but I suspect low memory conditions aren't handled gracefully
+* The C -> C++ interop definitely leaks some C++ exceptions
+  * Obvious cases like file not found and unsupported Parquet types are OK
+  * Low memory conditions aren't handled gracefully.
 
 ## Building
 
