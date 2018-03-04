@@ -12,6 +12,7 @@ class ParquetCursor {
   std::shared_ptr<parquet::RowGroupReader> rowGroup;
   std::vector<std::shared_ptr<parquet::Scanner>> scanners;
   std::vector<parquet::Type::type> types;
+  std::vector<parquet::LogicalType::type> logicalTypes;
 
   std::vector<int> colRows;
   std::vector<bool> colNulls;
@@ -36,6 +37,7 @@ public:
   void ensureColumn(int col);
   bool isNull(int col);
   parquet::Type::type getPhysicalType(int col);
+  parquet::LogicalType::type getLogicalType(int col);
 
   int getInt32(int col);
   long getInt64(int col);

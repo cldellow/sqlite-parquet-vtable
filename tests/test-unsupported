@@ -28,7 +28,7 @@ main() {
     "$root"/sqlite/sqlite3 -init <(load_unsupported "$unsupported") < /dev/null > /dev/null 2> testcase-err.txt
     # We expect the 'SELECT 123' command to NOT have been run
     if grep -q 123 testcase-out.txt; then
-      echo "...FAILED" >&2
+      echo "...FAILED; expected an error message. Check testcase-{out,err}.txt" >&2
       exit 1
     fi
   done < <(echo "$unsupported_files")

@@ -32,8 +32,13 @@ void ParquetCursor::nextRowGroup() {
     types.push_back(rowGroupMetadata->schema()->Column(0)->physical_type());
   }
 
+  while(logicalTypes.size() < (unsigned int)rowGroupMetadata->num_columns()) {
+    logicalTypes.push_back(rowGroupMetadata->schema()->Column(0)->logical_type());
+  }
+
   for(unsigned int i = 0; i < (unsigned int)rowGroupMetadata->num_columns(); i++) {
     types[i] = rowGroupMetadata->schema()->Column(i)->physical_type();
+    logicalTypes[i] = rowGroupMetadata->schema()->Column(i)->logical_type();
   }
 }
 
@@ -169,6 +174,18 @@ void ParquetCursor::ensureColumn(int col) {
         break;
       }
       case parquet::Type::FIXED_LEN_BYTE_ARRAY:
+      {
+        parquet::FixedLenByteArrayScanner* s = (parquet::FixedLenByteArrayScanner*)scanners[col].get();
+        parquet::FixedLenByteArray flba;
+        if(s->NextValue(&flba, &wasNull)) {
+          colByteArrayValues[col].ptr = flba.ptr;
+          // TODO: cache this
+          colByteArrayValues[col].len = rowGroupMetadata->schema()->Column(col)->type_length();
+        } else {
+          throw std::invalid_argument("unexpectedly lacking a next value");
+        }
+        break;
+      }
       default:
         // Should be impossible to get here as we should have forbidden this at
         // CREATE time -- maybe file changed underneath us?
@@ -203,9 +220,10 @@ parquet::ByteArray* ParquetCursor::getByteArray(int col) {
   return &colByteArrayValues[col];
 }
 
-
-
 parquet::Type::type ParquetCursor::getPhysicalType(int col) {
-//  return rowGroupMetadata->schema()->Column(col)->physical_type();
   return types[col];
+}
+
+parquet::LogicalType::type ParquetCursor::getLogicalType(int col) {
+  return logicalTypes[col];
 }

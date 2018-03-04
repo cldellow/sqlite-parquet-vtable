@@ -46,9 +46,9 @@ These types are supported:
 * BOOLEAN
 * FLOAT
 * DOUBLE
+* Variable- and fixed-length byte arrays
 
 These are not supported:
 
 * UINT8/UINT16/UINT32/UINT64
-* Fixed length byte arrays, including JSON and BSON subtypes
 * DECIMAL

@@ -188,7 +188,11 @@ static int parquetColumn(
       case parquet::Type::BYTE_ARRAY:
       {
         parquet::ByteArray* rv = cursor->getByteArray(col);
-        sqlite3_result_text(ctx, (const char*)rv->ptr, rv->len, SQLITE_TRANSIENT);
+        if(cursor->getLogicalType(col) == parquet::LogicalType::UTF8) {
+          sqlite3_result_text(ctx, (const char*)rv->ptr, rv->len, SQLITE_TRANSIENT);
+        } else {
+          sqlite3_result_blob(ctx, (void*)rv->ptr, rv->len, SQLITE_TRANSIENT);
+        }
         break;
       }
       case parquet::Type::INT96:
@@ -201,6 +205,11 @@ static int parquetColumn(
         break;
       }
       case parquet::Type::FIXED_LEN_BYTE_ARRAY:
+      {
+        parquet::ByteArray* rv = cursor->getByteArray(col);
+        sqlite3_result_blob(ctx, (void*)rv->ptr, rv->len, SQLITE_TRANSIENT);
+        break;
+      }
       default:
         // Should be impossible to get here as we should have forbidden this at
         // CREATE time -- maybe file changed underneath us?

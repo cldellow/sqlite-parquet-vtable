@@ -82,9 +82,13 @@ std::string ParquetTable::CreateStatement() {
         case parquet::Type::BYTE_ARRAY:
           if(logical == parquet::LogicalType::UTF8) {
             type = "TEXT";
+          } else {
+            type = "BLOB";
           }
           break;
         case parquet::Type::FIXED_LEN_BYTE_ARRAY:
+          type = "BLOB";
+          break;
         default:
           break;
       }
