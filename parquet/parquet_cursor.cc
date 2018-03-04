@@ -86,6 +86,17 @@ void ParquetCursor::ensureColumn(int col) {
         }
         break;
       }
+      case parquet::Type::FLOAT:
+      {
+        parquet::FloatScanner* s = (parquet::FloatScanner*)scanners[col].get();
+        float rv = 0;
+        if(s->NextValue(&rv, &wasNull)) {
+          colDoubleValues[col] = rv;
+        } else {
+          throw std::invalid_argument("unexpectedly lacking a next value");
+        }
+        break;
+      }
       case parquet::Type::DOUBLE:
       {
         parquet::DoubleScanner* s = (parquet::DoubleScanner*)scanners[col].get();
@@ -157,7 +168,6 @@ void ParquetCursor::ensureColumn(int col) {
         }
         break;
       }
-      case parquet::Type::FLOAT:
       case parquet::Type::FIXED_LEN_BYTE_ARRAY:
       default:
         // Should be impossible to get here as we should have forbidden this at

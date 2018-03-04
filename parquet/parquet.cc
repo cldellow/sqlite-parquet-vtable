@@ -178,6 +178,7 @@ static int parquetColumn(
         sqlite3_result_int(ctx, rv);
         break;
       }
+      case parquet::Type::FLOAT:
       case parquet::Type::DOUBLE:
       {
         double rv = cursor->getDouble(col);
@@ -199,7 +200,6 @@ static int parquetColumn(
         sqlite3_result_int64(ctx, rv);
         break;
       }
-      case parquet::Type::FLOAT:
       case parquet::Type::FIXED_LEN_BYTE_ARRAY:
       default:
         // Should be impossible to get here as we should have forbidden this at

@@ -41,14 +41,6 @@ public:
   long getInt64(int col);
   double getDouble(int col);
   parquet::ByteArray* getByteArray(int col);
-
-  /*
-  sqlite3_result_double()
-  sqlite3_result_int()
-  sqlite3_result_int64()
-  sqlite3_result_null()
-  sqlite3_result_text()
-  */
 };
 
 #endif
