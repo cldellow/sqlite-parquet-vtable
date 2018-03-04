@@ -79,7 +79,9 @@ def write_unsupported_parquets():
         pa.null(),
         pa.uint8(),
         pa.uint16(),
-        pa.uint32(),
+        # per https://issues.apache.org/jira/browse/ARROW-436, I think
+        # Parquet v1.0 can't serialize UINT32
+        #pa.uint32(),
         pa.uint64(),
         # pa.float16() <-- not supported by us, but also not by pyarrow
         # TODO: list_, struct, dict

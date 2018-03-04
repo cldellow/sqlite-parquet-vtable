@@ -39,3 +39,5 @@
 /sqlite-autoconf*
 /cmds.txt
 /sqlite-with-parquet
+/testcase-out.txt
+/testcase-err.txt
