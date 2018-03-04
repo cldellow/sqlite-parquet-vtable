@@ -26,7 +26,7 @@ class ParquetCursor {
   int numRowGroups;
   int rowsLeftInRowGroup;
 
-  void nextRowGroup();
+  bool nextRowGroup();
 
 public:
   ParquetCursor(ParquetTable* table);

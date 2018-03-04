@@ -16,10 +16,10 @@ ParquetCursor::ParquetCursor(ParquetTable* table) {
   this->numRowGroups = reader->metadata()->num_row_groups();
 }
 
-void ParquetCursor::nextRowGroup() {
+bool ParquetCursor::nextRowGroup() {
   // TODO: skip row groups that cannot satisfy the constraints
-  if(this->rowGroupId >= this->numRowGroups)
-    return;
+  if((this->rowGroupId + 1) >= this->numRowGroups)
+    return false;
 
   rowGroupId++;
   rowGroupMetadata = this->reader->metadata()->RowGroup(0);
@@ -40,11 +40,19 @@ void ParquetCursor::nextRowGroup() {
     types[i] = rowGroupMetadata->schema()->Column(i)->physical_type();
     logicalTypes[i] = rowGroupMetadata->schema()->Column(i)->logical_type();
   }
+
+  return true;
 }
 
 void ParquetCursor::next() {
-  if(rowsLeftInRowGroup == 0)
-    nextRowGroup();
+  if(rowsLeftInRowGroup == 0) {
+    if(!nextRowGroup()) {
+      // put rowId over the edge so eof returns true
+      rowId++;
+      return;
+    }
+  }
+
   rowsLeftInRowGroup--;
   rowId++;
 }
