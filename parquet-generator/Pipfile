@@ -1,0 +1,20 @@
+[[source]]
+
+verify_ssl = true
+url = "https://pypi.python.org/simple"
+name = "pypi"
+
+
+[requires]
+
+python_version = "3.5"
+
+
+[packages]
+
+pyarrow = "*"
+pylint = "*"
+
+
+[dev-packages]
+
