@@ -35,10 +35,13 @@ public:
 
   void ensureColumn(int col);
   bool isNull(int col);
-  int getInt(int col);
+  parquet::Type::type getPhysicalType(int col);
+
+  int getInt32(int col);
+  long getInt64(int col);
   double getDouble(int col);
   parquet::ByteArray* getByteArray(int col);
-  parquet::Type::type getPhysicalType(int col);
+
   /*
   sqlite3_result_double()
   sqlite3_result_int()

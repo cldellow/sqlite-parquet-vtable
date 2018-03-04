@@ -171,33 +171,44 @@ static int parquetColumn(
     sqlite3_result_null(ctx);
   } else {
     switch(cursor->getPhysicalType(col)) {
+      case parquet::Type::BOOLEAN:
       case parquet::Type::INT32:
       {
-        int rv = cursor->getInt(col);
+        int rv = cursor->getInt32(col);
         sqlite3_result_int(ctx, rv);
+        break;
       }
-      break;
-
       case parquet::Type::DOUBLE:
       {
         double rv = cursor->getDouble(col);
         sqlite3_result_double(ctx, rv);
+        break;
       }
-      break;
       case parquet::Type::BYTE_ARRAY:
       {
         parquet::ByteArray* rv = cursor->getByteArray(col);
         sqlite3_result_text(ctx, (const char*)rv->ptr, rv->len, SQLITE_TRANSIENT);
+        break;
       }
-      break;
-
-      case parquet::Type::BOOLEAN:
-      case parquet::Type::INT64:
-      case parquet::Type::FLOAT:
       case parquet::Type::INT96:
+        // This type exists to store timestamps in nanoseconds due to legacy
+        // reasons. We just interpret it as a timestamp in milliseconds.
+      case parquet::Type::INT64:
+      {
+        long rv = cursor->getInt64(col);
+        sqlite3_result_int64(ctx, rv);
+        break;
+      }
+      case parquet::Type::FLOAT:
       case parquet::Type::FIXED_LEN_BYTE_ARRAY:
       default:
-        throw std::invalid_argument("cannot handle this type");
+        // Should be impossible to get here as we should have forbidden this at
+        // CREATE time -- maybe file changed underneath us?
+        std::ostringstream ss;
+        ss << __FILE__ << ":" << __LINE__ << ": column " << col << " has unsupported type: " <<
+          parquet::TypeToString(cursor->getPhysicalType(col));
+
+        throw std::invalid_argument(ss.str());
         break;
     }
   }

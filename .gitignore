@@ -37,3 +37,5 @@
 # transient sqlite files
 /sqlite
 /sqlite-autoconf*
+/cmds.txt
+/sqlite-with-parquet

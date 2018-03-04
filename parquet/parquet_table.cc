@@ -16,22 +16,18 @@ std::string ParquetTable::CreateStatement() {
     auto _col = schema->GetColumnRoot(i);
 
     if(!_col->is_primitive()) {
-      throw std::invalid_argument("parquet file has non-primitive column");
+      std::ostringstream ss;
+      ss << __FILE__ << ":" << __LINE__ << ": column " << i << " has non-primitive type";
+      throw std::invalid_argument(ss.str());
     }
 
     if(_col->is_repeated()) {
-      throw std::invalid_argument("parquet file has non-scalar column");
+      std::ostringstream ss;
+      ss << __FILE__ << ":" << __LINE__ << ": column " << i << " has non-scalar type";
+      throw std::invalid_argument(ss.str());
     }
 
     parquet::schema::PrimitiveNode* col = (parquet::schema::PrimitiveNode*)_col;
-
-    printf("col %d[p=%d:%s, l=%d:%s] is %s\n",
-        i,
-        col->physical_type(),
-        parquet::TypeToString(col->physical_type()).data(),
-        col->logical_type(),
-        parquet::LogicalTypeToString(col->logical_type()).data(),
-        col->name().data());
 
     if(i > 0)
       text += ", ";
@@ -52,6 +48,9 @@ std::string ParquetTable::CreateStatement() {
           type = "SMALLINT";
         }
         break;
+      case parquet::Type::INT96:
+        // INT96 is used for nanosecond precision on timestamps; we truncate
+        // to millisecond precision.
       case parquet::Type::INT64:
         type = "BIGINT";
         break;
@@ -67,15 +66,29 @@ std::string ParquetTable::CreateStatement() {
         }
         break;
       case parquet::Type::FIXED_LEN_BYTE_ARRAY:
-      case parquet::Type::INT96:
       default:
         break;
     }
 
     if(type.empty()) {
-      throw std::invalid_argument("unsupported type");
+      std::ostringstream ss;
+      ss << __FILE__ << ":" << __LINE__ << ": column " << i << " has unsupported type: " <<
+        parquet::TypeToString(col->physical_type()) << "/" << parquet::LogicalTypeToString(col->logical_type());
+
+      throw std::invalid_argument(ss.str());
     }
-    printf("...%s\n", type.data());
+
+#ifdef DEBUG
+    printf("col %d[name=%s, p=%d:%s, l=%d:%s] is %s\n",
+        i,
+        col->name().data(),
+        col->physical_type(),
+        parquet::TypeToString(col->physical_type()).data(),
+        col->logical_type(),
+        parquet::LogicalTypeToString(col->logical_type()).data(),
+        type.data());
+#endif
+
     text += " ";
     text += type;
   }

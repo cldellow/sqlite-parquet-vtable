@@ -84,8 +84,8 @@ void ParquetCursor::ensureColumn(int col) {
         } else {
           throw std::invalid_argument("unexpectedly lacking a next value");
         }
+        break;
       }
-      break;
       case parquet::Type::DOUBLE:
       {
         parquet::DoubleScanner* s = (parquet::DoubleScanner*)scanners[col].get();
@@ -95,24 +95,77 @@ void ParquetCursor::ensureColumn(int col) {
         } else {
           throw std::invalid_argument("unexpectedly lacking a next value");
         }
+        break;
       }
-      break;
       case parquet::Type::BYTE_ARRAY:
       {
         parquet::ByteArrayScanner* s = (parquet::ByteArrayScanner*)scanners[col].get();
         if(!s->NextValue(&colByteArrayValues[col], &wasNull)) {
           throw std::invalid_argument("unexpectedly lacking a next value");
         }
+        break;
       }
-      break;
+      case parquet::Type::INT96:
+      {
+        // INT96 tracks a date with nanosecond precision, convert to ms since epoch.
+        // ...see https://github.com/apache/parquet-format/pull/49 for more
+        //
+        // First 8 bytes: nanoseconds into the day
+        // Last 4 bytes: Julian day
+        // To get nanoseconds since the epoch:
+        // (julian_day - 2440588) * (86400 * 1000 * 1000 * 1000) + nanoseconds
+        parquet::Int96Scanner* s = (parquet::Int96Scanner*)scanners[col].get();
+        parquet::Int96 rv;
+        rv.value[0] = 0;
+        rv.value[1] = 0;
+        rv.value[2] = 0;
+        if(s->NextValue(&rv, &wasNull)) {
+          __int128 ns = rv.value[0] + ((unsigned long)rv.value[1] << 32);
+          __int128 julianDay = rv.value[2];
+          __int128 nsSinceEpoch = (julianDay - 2440588);
+          nsSinceEpoch *= 86400;
+          nsSinceEpoch *= 1000 * 1000 * 1000;
+          nsSinceEpoch += ns;
+          nsSinceEpoch /= 1000000;
+
+          colIntValues[col] = nsSinceEpoch;
+        } else {
+          throw std::invalid_argument("unexpectedly lacking a next value");
+        }
+        break;
+      }
+      case parquet::Type::INT64:
+      {
+        parquet::Int64Scanner* s = (parquet::Int64Scanner*)scanners[col].get();
+        long rv = 0;
+        if(s->NextValue(&rv, &wasNull)) {
+          colIntValues[col] = rv;
+        } else {
+          throw std::invalid_argument("unexpectedly lacking a next value");
+        }
+        break;
+      }
 
       case parquet::Type::BOOLEAN:
-      case parquet::Type::INT64:
+      {
+        parquet::BoolScanner* s = (parquet::BoolScanner*)scanners[col].get();
+        bool rv = false;
+        if(s->NextValue(&rv, &wasNull)) {
+          colIntValues[col] = rv ? 1 : 0;
+        } else {
+          throw std::invalid_argument("unexpectedly lacking a next value");
+        }
+        break;
+      }
       case parquet::Type::FLOAT:
-      case parquet::Type::INT96:
       case parquet::Type::FIXED_LEN_BYTE_ARRAY:
       default:
-        throw std::invalid_argument("cannot handle");
+        // Should be impossible to get here as we should have forbidden this at
+        // CREATE time -- maybe file changed underneath us?
+        std::ostringstream ss;
+        ss << __FILE__ << ":" << __LINE__ << ": column " << col << " has unsupported type: " <<
+          parquet::TypeToString(types[col]);
+        throw std::invalid_argument(ss.str());
       break;
     }
 
@@ -124,7 +177,11 @@ bool ParquetCursor::isNull(int col) {
   return colNulls[col];
 }
 
-int ParquetCursor::getInt(int col) {
+int ParquetCursor::getInt32(int col) {
+  return colIntValues[col];
+}
+
+long ParquetCursor::getInt64(int col) {
   return colIntValues[col];
 }
 
