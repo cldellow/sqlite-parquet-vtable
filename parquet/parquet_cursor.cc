@@ -11,6 +11,7 @@ bool ParquetCursor::nextRowGroup() {
   if((rowGroupId + 1) >= numRowGroups)
     return false;
 
+  rowGroupStartRowId = rowId;
   rowGroupId++;
   rowGroupMetadata = reader->metadata()->RowGroup(0);
   rowsLeftInRowGroup = rowGroupMetadata->num_rows();
@@ -29,6 +30,10 @@ bool ParquetCursor::nextRowGroup() {
   for(unsigned int i = 0; i < (unsigned int)rowGroupMetadata->num_columns(); i++) {
     types[i] = rowGroupMetadata->schema()->Column(i)->physical_type();
     logicalTypes[i] = rowGroupMetadata->schema()->Column(i)->logical_type();
+  }
+
+  for(unsigned int i = 0; i < colRows.size(); i++) {
+    colRows[i] = rowId;
   }
 
   return true;
@@ -59,7 +64,8 @@ void ParquetCursor::ensureColumn(int col) {
   // need to ensure a scanner exists (and skip the # of rows in the rowgroup)
   while((unsigned int)col >= scanners.size()) {
     scanners.push_back(std::shared_ptr<parquet::Scanner>());
-    colRows.push_back(-1);
+    // If it doesn't exist, it's the rowId as of the last nextRowGroup call
+    colRows.push_back(rowGroupStartRowId);
     colNulls.push_back(false);
     colIntValues.push_back(0);
     colDoubleValues.push_back(0);
@@ -74,8 +80,83 @@ void ParquetCursor::ensureColumn(int col) {
 
   // Actually fetch a value, stash data in colRows, colNulls, colValues
   if(colRows[col] != rowId) {
-    colRows[col] = rowId;
+    // We may need to skip some records, eg, a query like
+    // SELECT a WHERE b = 10
+    // may have read b, but skipped a until b matches the predicate.
     bool wasNull = false;
+    while(colRows[col] + 1 < rowId) {
+      switch(types[col]) {
+        case parquet::Type::INT32:
+        {
+          parquet::Int32Scanner* s = (parquet::Int32Scanner*)scanners[col].get();
+          int rv = 0;
+          s->NextValue(&rv, &wasNull);
+          break;
+        }
+        case parquet::Type::FLOAT:
+        {
+          parquet::FloatScanner* s = (parquet::FloatScanner*)scanners[col].get();
+          float rv = 0;
+          s->NextValue(&rv, &wasNull);
+          break;
+        }
+        case parquet::Type::DOUBLE:
+        {
+          parquet::DoubleScanner* s = (parquet::DoubleScanner*)scanners[col].get();
+          double rv = 0;
+          s->NextValue(&rv, &wasNull);
+          break;
+        }
+        case parquet::Type::BYTE_ARRAY:
+        {
+          parquet::ByteArrayScanner* s = (parquet::ByteArrayScanner*)scanners[col].get();
+          parquet::ByteArray ba;
+          s->NextValue(&ba, &wasNull);
+          break;
+        }
+        case parquet::Type::INT96:
+        {
+          parquet::Int96Scanner* s = (parquet::Int96Scanner*)scanners[col].get();
+          parquet::Int96 rv;
+          s->NextValue(&rv, &wasNull);
+          break;
+        }
+        case parquet::Type::INT64:
+        {
+          parquet::Int64Scanner* s = (parquet::Int64Scanner*)scanners[col].get();
+          long rv = 0;
+          s->NextValue(&rv, &wasNull);
+          break;
+        }
+        case parquet::Type::BOOLEAN:
+        {
+          parquet::BoolScanner* s = (parquet::BoolScanner*)scanners[col].get();
+          bool rv = false;
+          s->NextValue(&rv, &wasNull);
+          break;
+        }
+        case parquet::Type::FIXED_LEN_BYTE_ARRAY:
+        {
+          parquet::FixedLenByteArrayScanner* s = (parquet::FixedLenByteArrayScanner*)scanners[col].get();
+          parquet::FixedLenByteArray flba;
+          s->NextValue(&flba, &wasNull);
+          break;
+        }
+        default:
+          // Should be impossible to get here as we should have forbidden this at
+          // CREATE time -- maybe file changed underneath us?
+          std::ostringstream ss;
+          ss << __FILE__ << ":" << __LINE__ << ": column " << col << " has unsupported type: " <<
+            parquet::TypeToString(types[col]);
+          throw std::invalid_argument(ss.str());
+        break;
+
+      }
+      colRows[col]++;
+    }
+
+    colRows[col] = rowId;
+    wasNull = false;
 
     switch(types[col]) {
       case parquet::Type::INT32:

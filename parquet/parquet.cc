@@ -131,8 +131,6 @@ static int parquetClose(sqlite3_vtab_cursor *cur){
 ** Constructor for a new sqlite3_vtab_parquet cursor object.
 */
 static int parquetOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor){
-  printf("xOpen\n");
-
   std::unique_ptr<sqlite3_vtab_cursor_parquet, void(*)(void*)> cursor(
       (sqlite3_vtab_cursor_parquet*)sqlite3_malloc(sizeof(sqlite3_vtab_cursor_parquet)),
       sqlite3_free);
@@ -254,7 +252,6 @@ static int parquetFilter(
   int idxNum, const char *idxStr,
   int argc, sqlite3_value **argv
 ){
-  printf("xFilter\n");
   ParquetCursor* cursor = ((sqlite3_vtab_cursor_parquet*)cur)->cursor;
   cursor->reset();
   return parquetNext(cur);

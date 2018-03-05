@@ -23,13 +23,13 @@ main() {
   root=$(readlink -f "$root")
   cd "$root"
 
-  queries=$(find tests/queries -type f -name '*.sql')
+  queries=$(find tests/queries -type f -name '*.sql' | sort)
   while read -r file; do
     echo "Testing: $file"
     parquet_file=$(head -n1 "$file")
     query=$(head -n2 "$file" | tail -n1)
     results=$(tail -n+3 "$file")
-    if ! "$root"/sqlite/sqlite3 -init <(run_query "$file" "$parquet_file" "$query") < /dev/null > /dev/null 2> testcase-err.txt; then
+    if ! "$root"/sqlite/sqlite3 -init <(run_query "$file" "$parquet_file" "$query") < /dev/null > testcase-stdout.txt 2> testcase-stderr.txt; then
       echo "...FAILED; check testcase-{out,err}.txt" >&2
       exit 1
     fi

@@ -22,6 +22,7 @@ class ParquetCursor {
 
   int rowId;
   int rowGroupId;
+  int rowGroupStartRowId;
   int numRows;
   int numRowGroups;
   int rowsLeftInRowGroup;

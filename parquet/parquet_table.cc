@@ -11,7 +11,6 @@ std::string ParquetTable::CreateStatement() {
   // TODO: parse columns from file
   std::string text("CREATE TABLE x(");
   auto schema = reader->metadata()->schema();
-  printf("num cols: %d\n", schema->num_columns());
   for(auto i = 0; i < schema->num_columns(); i++) {
     auto _col = schema->GetColumnRoot(i);
 
