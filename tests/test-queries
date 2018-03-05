@@ -1,0 +1,41 @@
+#!/bin/bash
+set -euo pipefail
+
+# For each files in tests/queries/*, mount that parquet file, run the query, and compare
+# its output.
+
+run_query() {
+  file=${1:?must provide testcase file}
+  parquet_file=${2:?must provide parquet file to load}
+  query=${3:?must provide query to run}
+  basename=$(basename "$file")
+  cat <<EOF
+.load parquet/libparquet
+.testcase $basename
+.bail on
+CREATE VIRTUAL TABLE test USING parquet('parquet-generator/$parquet_file');
+$query
+EOF
+}
+
+main() {
+  root=$(dirname "${BASH_SOURCE[0]}")/..
+  root=$(readlink -f "$root")
+  cd "$root"
+
+  queries=$(find tests/queries -type f -name '*.sql')
+  while read -r file; do
+    echo "Testing: $file"
+    parquet_file=$(head -n1 "$file")
+    query=$(head -n2 "$file" | tail -n1)
+    results=$(tail -n+3 "$file")
+    if ! "$root"/sqlite/sqlite3 -init <(run_query "$file" "$parquet_file" "$query") < /dev/null > /dev/null 2> testcase-err.txt; then
+      echo "...FAILED; check testcase-{out,err}.txt" >&2
+      exit 1
+    fi
+
+    diff testcase-out.txt <(echo "$results")
+  done < <(echo "$queries")
+}
+
+main "$@"

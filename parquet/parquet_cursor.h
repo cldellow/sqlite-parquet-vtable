@@ -32,6 +32,8 @@ public:
   ParquetCursor(ParquetTable* table);
   int getRowId();
   void next();
+  void close();
+  void reset();
   bool eof();
 
   void ensureColumn(int col);

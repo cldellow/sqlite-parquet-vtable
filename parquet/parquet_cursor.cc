@@ -2,27 +2,17 @@
 
 ParquetCursor::ParquetCursor(ParquetTable* table) {
   this->table = table;
-  this->rowId = -1;
-  // TODO: consider having a long lived handle in ParquetTable that can be borrowed
-  // without incurring the cost of opening the file from scratch twice
-  this->reader = parquet::ParquetFileReader::OpenFile(this->table->file.data());
-
-  this->rowGroupId = -1;
-  // TODO: handle the case where rowgroups have disjoint schemas?
-  // TODO: or at least, fail fast if detected
-  this->rowsLeftInRowGroup = 0;
-
-  this->numRows = reader->metadata()->num_rows();
-  this->numRowGroups = reader->metadata()->num_row_groups();
+  reader = NULL;
+  reset();
 }
 
 bool ParquetCursor::nextRowGroup() {
   // TODO: skip row groups that cannot satisfy the constraints
-  if((this->rowGroupId + 1) >= this->numRowGroups)
+  if((rowGroupId + 1) >= numRowGroups)
     return false;
 
   rowGroupId++;
-  rowGroupMetadata = this->reader->metadata()->RowGroup(0);
+  rowGroupMetadata = reader->metadata()->RowGroup(0);
   rowsLeftInRowGroup = rowGroupMetadata->num_rows();
   rowGroup = reader->RowGroup(rowGroupId);
   for(unsigned int i = 0; i < scanners.size(); i++)
@@ -234,4 +224,26 @@ parquet::Type::type ParquetCursor::getPhysicalType(int col) {
 
 parquet::LogicalType::type ParquetCursor::getLogicalType(int col) {
   return logicalTypes[col];
+}
+
+void ParquetCursor::close() {
+  if(reader != NULL) {
+    reader->Close();
+  }
+}
+
+void ParquetCursor::reset() {
+  close();
+  rowId = -1;
+  // TODO: consider having a long lived handle in ParquetTable that can be borrowed
+  // without incurring the cost of opening the file from scratch twice
+  reader = parquet::ParquetFileReader::OpenFile(table->file.data());
+
+  rowGroupId = -1;
+  // TODO: handle the case where rowgroups have disjoint schemas?
+  // TODO: or at least, fail fast if detected
+  rowsLeftInRowGroup = 0;
+
+  numRows = reader->metadata()->num_rows();
+  numRowGroups = reader->metadata()->num_row_groups();
 }

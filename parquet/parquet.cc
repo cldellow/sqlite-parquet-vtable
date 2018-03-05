@@ -121,6 +121,7 @@ static int parquetCreate(
 */
 static int parquetClose(sqlite3_vtab_cursor *cur){
   sqlite3_vtab_cursor_parquet* p = (sqlite3_vtab_cursor_parquet*)cur;
+  p->cursor->close();
   delete p->cursor;
   sqlite3_free(cur);
   return SQLITE_OK;
@@ -249,28 +250,14 @@ static int parquetEof(sqlite3_vtab_cursor *cur){
 ** the beginning.
 */
 static int parquetFilter(
-  sqlite3_vtab_cursor *pVtabCursor, 
+  sqlite3_vtab_cursor *cur,
   int idxNum, const char *idxStr,
   int argc, sqlite3_value **argv
 ){
   printf("xFilter\n");
-  //sqlite3_vtab_cursor_parquet *pCur = (sqlite3_vtab_cursor_parquet*)pVtabCursor;
-  //sqlite3_vtab_parquet *pTab = (sqlite3_vtab_parquet*)pVtabCursor->pVtab;
-
-  /*
-  pCur->iRowid = 0;
-  if( pCur->rdr.in==0 ){
-    assert( pCur->rdr.zIn==pTab->zData );
-    assert( pTab->iStart>=0 );
-    assert( (size_t)pTab->iStart<=pCur->rdr.nIn );
-    pCur->rdr.iIn = pTab->iStart;
-  }else{
-    fseek(pCur->rdr.in, pTab->iStart, SEEK_SET);
-    pCur->rdr.iIn = 0;
-    pCur->rdr.nIn = 0;
-  }
-  */
-  return parquetNext(pVtabCursor);
+  ParquetCursor* cursor = ((sqlite3_vtab_cursor_parquet*)cur)->cursor;
+  cursor->reset();
+  return parquetNext(cur);
 }
 
 /*
