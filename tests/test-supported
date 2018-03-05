@@ -26,7 +26,7 @@ main() {
   supported_files=$(find . -type f -name '*.parquet' -not -name 'unsupported*.parquet')
   while read -r supported; do
     echo "Testing: $supported"
-    if ! "$root"/sqlite/sqlite3 -init <(load_supported "$supported") < /dev/null > /dev/null 2> testcase-err.txt; then
+    if ! "$root"/sqlite/sqlite3 -init <(load_supported "$supported") < /dev/null > /dev/null 2> testcase-stderr.txt; then
       echo "...FAILED; check testcase-{out,err}.txt" >&2
       exit 1
     fi
