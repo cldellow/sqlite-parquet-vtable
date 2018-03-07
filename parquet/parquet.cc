@@ -252,6 +252,7 @@ static int parquetFilter(
   int idxNum, const char *idxStr,
   int argc, sqlite3_value **argv
 ){
+  printf("xFilter: idxNum=%d\n", idxNum);
   ParquetCursor* cursor = ((sqlite3_vtab_cursor_parquet*)cur)->cursor;
   cursor->reset();
   return parquetNext(cur);
@@ -265,7 +266,67 @@ static int parquetBestIndex(
   sqlite3_vtab *tab,
   sqlite3_index_info *pIdxInfo
 ){
-  pIdxInfo->estimatedCost = 1000000;
+  printf("xBestIndex: nConstraint=%d, nOrderBy=%d\n", pIdxInfo->nConstraint, pIdxInfo->nOrderBy);
+  // Duplicate pIdxInfo and stash it in pIdxInfo->idxStr.
+  for(int i = 0; i < pIdxInfo->nConstraint; i++) {
+    printf("  constraint %d: col %d, op %d, usable %d\n",
+        i,
+        pIdxInfo->aConstraint[i].iColumn,
+        pIdxInfo->aConstraint[i].op,
+        pIdxInfo->aConstraint[i].usable);
+  }
+
+  if(true || (pIdxInfo->nConstraint == 0 && pIdxInfo->nOrderBy == 0)) {
+    pIdxInfo->estimatedCost = 1000000000000;
+    pIdxInfo->idxNum = 0;
+    pIdxInfo->estimatedRows = 10000;
+  } else {
+    pIdxInfo->estimatedCost = 1;
+    pIdxInfo->idxNum = 1;
+    pIdxInfo->estimatedRows = 100000;
+    pIdxInfo->aConstraintUsage[0].argvIndex = 1;
+//    pIdxInfo->idxFlags = SQLITE_INDEX_SCAN_UNIQUE;
+  }
+  printf("idx %d has cost %f\n", pIdxInfo->idxNum, pIdxInfo->estimatedCost);
+
+  size_t dupeSize = sizeof(sqlite3_index_info) +
+    //pIdxInfo->nConstraint * sizeof(sqlite3_index_constraint) +
+    pIdxInfo->nConstraint * sizeof(sqlite3_index_info::sqlite3_index_constraint) +
+    pIdxInfo->nOrderBy * sizeof(sqlite3_index_info::sqlite3_index_orderby) +
+    pIdxInfo->nConstraint * sizeof(sqlite3_index_info::sqlite3_index_constraint_usage);
+  sqlite3_index_info* dupe = (sqlite3_index_info*)sqlite3_malloc(dupeSize);
+  pIdxInfo->idxStr = (char*)dupe;
+  pIdxInfo->needToFreeIdxStr = 1;
+
+  // TODO: populate argvIndex.
+  memset(dupe, 0, dupeSize);
+  memcpy(dupe, pIdxInfo, sizeof(sqlite3_index_info));
+
+  dupe->aConstraint = (sqlite3_index_info::sqlite3_index_constraint*)((char*)dupe + sizeof(sqlite3_index_info));
+  dupe->aOrderBy = (sqlite3_index_info::sqlite3_index_orderby*)((char*)dupe +
+      sizeof(sqlite3_index_info) +
+      pIdxInfo->nConstraint * sizeof(sqlite3_index_info::sqlite3_index_constraint));
+  dupe->aConstraintUsage = (sqlite3_index_info::sqlite3_index_constraint_usage*)((char*)dupe +
+      sizeof(sqlite3_index_info) +
+      pIdxInfo->nConstraint * sizeof(sqlite3_index_info::sqlite3_index_constraint) +
+      pIdxInfo->nOrderBy * sizeof(sqlite3_index_info::sqlite3_index_orderby));
+
+
+  for(int i = 0; i < pIdxInfo->nConstraint; i++) {
+    dupe->aConstraint[i].iColumn = pIdxInfo->aConstraint[i].iColumn;
+    dupe->aConstraint[i].op = pIdxInfo->aConstraint[i].op;
+    dupe->aConstraint[i].usable = pIdxInfo->aConstraint[i].usable;
+    dupe->aConstraint[i].iTermOffset = pIdxInfo->aConstraint[i].iTermOffset;
+
+    dupe->aConstraintUsage[i].argvIndex = pIdxInfo->aConstraintUsage[i].argvIndex;
+    dupe->aConstraintUsage[i].omit = pIdxInfo->aConstraintUsage[i].omit;
+  }
+
+  for(int i = 0; i < pIdxInfo->nOrderBy; i++) {
+    dupe->aOrderBy[i].iColumn = pIdxInfo->aOrderBy[i].iColumn;
+    dupe->aOrderBy[i].desc = pIdxInfo->aOrderBy[i].desc;
+  }
+
   return SQLITE_OK;
 }
 

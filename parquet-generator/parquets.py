@@ -62,6 +62,7 @@ def write_parquet(file_name, rows, types, row_group_size):
     def name_of(i):
         name = '{}_{}'.format(types[i], i)
         name = name.replace('timestamp[ns]', 'ts')
+        name = name.replace('fixed_size_binary[1]', 'binary')
         return name
 
     cols = [pa.Column.from_array(name_of(i), fields[i]) for i in range(len(fields))]
@@ -104,9 +105,9 @@ def main():
 
     for i in range(len(rows)):
         for j in range(len(rows[i])):
-            if (i + j) % 2 == 0:
+            if (i >= 10 and i <= 19) or (i >= 20 and (i + j) % 2 == 0):
                 rows[i][j] = None
-    write_parquet('100-rows-nulls.parquet', rows, types,row_group_size=100)
+    write_parquet('100-rows-nulls.parquet', rows, types,row_group_size=10)
 
     write_unsupported_parquets()
 
