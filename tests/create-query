@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -euo pipefail
+
+query=${1:?must provide query}
+
+echo "$query"
+psql parquet postgres <<EOF
+COPY ($query) TO STDOUT WITH (DELIMITER '|', NULL '');
+EOF

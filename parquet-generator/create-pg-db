@@ -34,7 +34,7 @@ COPY nulls FROM '$here/nulls.csv';
 
 CREATE OR REPLACE FUNCTION quote(TEXT) RETURNS TEXT AS \$\$
   BEGIN
-    RETURN \$1;
+    RETURN CASE WHEN \$1 IS NULL THEN 'NULL' ELSE \$1 END;
   END;
 \$\$ LANGUAGE 'plpgsql' IMMUTABLE;
 
