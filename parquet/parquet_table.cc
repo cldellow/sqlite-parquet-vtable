@@ -6,11 +6,22 @@ ParquetTable::ParquetTable(std::string file) {
   this->file = file;
 }
 
+std::string ParquetTable::columnName(int i) {
+  if(i == -1)
+    return "rowid";
+  return columnNames[i];
+}
+
 std::string ParquetTable::CreateStatement() {
   std::unique_ptr<parquet::ParquetFileReader> reader = parquet::ParquetFileReader::OpenFile(file.data());
-  // TODO: parse columns from file
   std::string text("CREATE TABLE x(");
   auto schema = reader->metadata()->schema();
+
+  for(auto i = 0; i < schema->num_columns(); i++) {
+    auto _col = schema->GetColumnRoot(i);
+    columnNames.push_back(_col->name());
+  }
+
   for(auto i = 0; i < schema->num_columns(); i++) {
     auto _col = schema->GetColumnRoot(i);
 

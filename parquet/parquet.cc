@@ -143,6 +143,40 @@ static int parquetOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor){
   return SQLITE_OK;
 }
 
+const char* opName(int op) {
+  switch(op) {
+    case SQLITE_INDEX_CONSTRAINT_EQ:
+      return "=";
+    case SQLITE_INDEX_CONSTRAINT_GT:
+      return ">";
+    case SQLITE_INDEX_CONSTRAINT_LE:
+      return "<=";
+    case SQLITE_INDEX_CONSTRAINT_LT:
+      return "<";
+    case SQLITE_INDEX_CONSTRAINT_GE:
+      return ">=";
+    case SQLITE_INDEX_CONSTRAINT_MATCH:
+      return "match";
+    case SQLITE_INDEX_CONSTRAINT_LIKE:
+      return "LIKE";
+    case SQLITE_INDEX_CONSTRAINT_GLOB:
+      return "GLOB";
+    case SQLITE_INDEX_CONSTRAINT_REGEXP:
+      return "REGEXP";
+    case SQLITE_INDEX_CONSTRAINT_NE:
+      return "!=";
+    case SQLITE_INDEX_CONSTRAINT_ISNOT:
+      return "IS NOT";
+    case SQLITE_INDEX_CONSTRAINT_ISNOTNULL:
+      return "IS NOT NULL";
+    case SQLITE_INDEX_CONSTRAINT_ISNULL:
+      return "IS NULL";
+    case SQLITE_INDEX_CONSTRAINT_IS:
+      return "IS";
+    default:
+      return "unknown";
+  }
+}
 
 /*
 ** Advance a sqlite3_vtab_cursor_parquet to its next row of input.
@@ -249,10 +283,14 @@ static int parquetEof(sqlite3_vtab_cursor *cur){
 */
 static int parquetFilter(
   sqlite3_vtab_cursor *cur,
-  int idxNum, const char *idxStr,
-  int argc, sqlite3_value **argv
+  int idxNum,
+  const char *idxStr,
+  int argc,
+  sqlite3_value **argv
 ){
-  printf("xFilter: idxNum=%d\n", idxNum);
+  printf("xFilter: idxNum=%d, idxStr=%lu, argc=%d\n", idxNum, (long unsigned int)idxStr, argc);
+  const unsigned char* needle = sqlite3_value_text(argv[0]);
+  printf("  ...%s\n", needle);
   ParquetCursor* cursor = ((sqlite3_vtab_cursor_parquet*)cur)->cursor;
   cursor->reset();
   return parquetNext(cur);
@@ -266,17 +304,21 @@ static int parquetBestIndex(
   sqlite3_vtab *tab,
   sqlite3_index_info *pIdxInfo
 ){
+  ParquetTable* table = ((sqlite3_vtab_parquet*)tab)->table;
+
   printf("xBestIndex: nConstraint=%d, nOrderBy=%d\n", pIdxInfo->nConstraint, pIdxInfo->nOrderBy);
   // Duplicate pIdxInfo and stash it in pIdxInfo->idxStr.
   for(int i = 0; i < pIdxInfo->nConstraint; i++) {
-    printf("  constraint %d: col %d, op %d, usable %d\n",
+    printf("  constraint %d: col %d[%s], op %d[%s], usable %d\n",
         i,
         pIdxInfo->aConstraint[i].iColumn,
+        table->columnName(pIdxInfo->aConstraint[i].iColumn).data(),
         pIdxInfo->aConstraint[i].op,
+        opName(pIdxInfo->aConstraint[i].op),
         pIdxInfo->aConstraint[i].usable);
   }
 
-  if(true || (pIdxInfo->nConstraint == 0 && pIdxInfo->nOrderBy == 0)) {
+  if((pIdxInfo->nConstraint == 0 && pIdxInfo->nOrderBy == 0)) {
     pIdxInfo->estimatedCost = 1000000000000;
     pIdxInfo->idxNum = 0;
     pIdxInfo->estimatedRows = 10000;

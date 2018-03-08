@@ -21,4 +21,4 @@ create virtual table parquet using parquet('/home/cldellow/src/csv2parquet/12m.p
 --select sum(col0) from parquet limit 1;
 --select * from parquet limit 10;
 --select sum(length(col3)) from parquet;
-select * from parquet where (col3 = 'Dawson Creeks') or col9 LIKE '%Bicycqq%' limit 20000;
+select * from parquet where rowid = 123 or (col3 = 'Dawson Creeks') or col9 LIKE '%Bicycqq%' limit 20000;
