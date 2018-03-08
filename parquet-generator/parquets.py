@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import re
 
 import pyarrow as pa
@@ -12,8 +12,8 @@ def make_100_rows():
         ba_fixed = bytearray()
         ba_fixed.append(i)
         ba_variable = bytearray()
-        for j in range(i):
-            ba_variable.append(j)
+        for j in range(1 + i % 5):
+            ba_variable.append(i)
         row = []
         # BOOLEAN, INT32, INT64, INT96, DOUBLE, BYTE_ARRAY, FLOAT
         row.append(i % 2 == 0) # BOOLEAN
@@ -21,7 +21,7 @@ def make_100_rows():
         row.append(100 * (50 - i)) # INT32/INT16
         row.append(1000 * 1000 * (50 - i)) # INT32/INT32
         row.append(1000 * 1000 * 1000 * (50 - i)) # INT64/INT64
-        row.append(datetime(1985, 7, 20) + timedelta(days=i)) # INT96
+        row.append(datetime(1985, 7, 20, tzinfo=timezone.utc) + timedelta(days=i)) # INT96
         row.append(100.0 / (i + 1)) # DOUBLE
         row.append(str(i)) # BYTE_ARRAY/UTF8
         row.append('{:03}'.format(i)), # BYTE_ARRAY/UTF8
@@ -95,12 +95,46 @@ def write_unsupported_parquets():
 
         write_parquet(file_name, [], [type], row_group_size=1)
 
+def write_csv(file_name, rows):
+    r'''Write a TSV that can be imported to Postgres.
+
+    Use "\N" for NULLs, tab literal for field separator.'''
+    print('Writing {}'.format(file_name))
+    with open(file_name, 'w') as f:
+        for rowid, row in enumerate(rows):
+            line = str(rowid)
+            for col in row:
+                line += '\t'
+
+                if col == True:
+                    line += '1'
+                elif col == False:
+                    line += '0'
+                elif col is None:
+                    line += r'\N'
+                elif isinstance(col, bytes):
+                    # Here we cheat and serialize a string that matches the output of
+                    # quote(binary_field) in SQLite
+                    entry = r"X'"
+                    for b in col:
+                        entry += '%0.2X' % b
+
+                    entry += "'"
+                    line += entry
+                elif isinstance(col, datetime):
+                    line += str(1000 * int(col.timestamp()))
+                else:
+                    line += str(col)
+
+            f.write(line + '\n')
+
 def main():
     '''Entrypoint.'''
     rows = make_100_rows()
     types = get_100_rows_types()
 
     write_parquet('100-rows-1.parquet', rows, types, row_group_size=100)
+    write_csv('no-nulls.csv', rows)
     write_parquet('100-rows-10.parquet', rows, types, row_group_size=10)
 
     for i in range(len(rows)):
@@ -108,6 +142,7 @@ def main():
             if (i >= 10 and i <= 19) or (i >= 20 and (i + j) % 2 == 0):
                 rows[i][j] = None
     write_parquet('100-rows-nulls.parquet', rows, types,row_group_size=10)
+    write_csv('nulls.csv', rows)
 
     write_unsupported_parquets()
 
