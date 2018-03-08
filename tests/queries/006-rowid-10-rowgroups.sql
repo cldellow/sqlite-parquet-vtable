@@ -1,3 +1,2 @@
-100-rows-10.parquet
-select int8_1 from test where rowid = 50;
+select int8_1 from no_nulls2 where rowid = 50;
 0

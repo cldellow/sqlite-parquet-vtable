@@ -6,14 +6,15 @@ set -euo pipefail
 
 run_query() {
   file=${1:?must provide testcase file}
-  parquet_file=${2:?must provide parquet file to load}
-  query=${3:?must provide query to run}
+  query=${2:?must provide query to run}
   basename=$(basename "$file")
   cat <<EOF
 .load parquet/libparquet
 .testcase $basename
 .bail on
-CREATE VIRTUAL TABLE test USING parquet('parquet-generator/$parquet_file');
+CREATE VIRTUAL TABLE nulls USING parquet('$root/parquet-generator/100-rows-nulls.parquet');
+CREATE VIRTUAL TABLE no_nulls1 USING parquet('$root/parquet-generator/100-rows-1.parquet');
+CREATE VIRTUAL TABLE no_nulls2 USING parquet('$root/parquet-generator/100-rows-10.parquet');
 $query
 EOF
 }
@@ -26,10 +27,9 @@ main() {
   queries=$(find tests/queries -type f -name '*.sql' | sort)
   while read -r file; do
     echo "Testing: $file"
-    parquet_file=$(head -n1 "$file")
-    query=$(head -n2 "$file" | tail -n1)
-    results=$(tail -n+3 "$file")
-    if ! "$root"/sqlite/sqlite3 -init <(run_query "$file" "$parquet_file" "$query") < /dev/null > testcase-stdout.txt 2> testcase-stderr.txt; then
+    query=$(head -n1 "$file" | tail -n1)
+    results=$(tail -n+2 "$file")
+    if ! "$root"/sqlite/sqlite3 -init <(run_query "$file" "$query") < /dev/null > testcase-stdout.txt 2> testcase-stderr.txt; then
       echo "...FAILED; check testcase-{out,err}.txt" >&2
       exit 1
     fi

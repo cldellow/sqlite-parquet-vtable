@@ -1,5 +1,4 @@
-100-rows-10.parquet
-SELECT rowid, bool_0, int8_1, int16_2, int32_3, int64_4, datetime(ts_5 / 1000, 'unixepoch'), printf("%.4f", double_6) AS double_6, string_7, string_8, quote(binary_9), quote(binary_10) FROM test;
+SELECT rowid, bool_0, int8_1, int16_2, int32_3, int64_4, datetime(ts_5 / 1000, 'unixepoch'), printf("%.4f", double_6) AS double_6, string_7, string_8, quote(binary_9), quote(binary_10) FROM no_nulls2;
 0|1|50|5000|50000000|50000000000|1985-07-20 00:00:00|100.0000|0|000|X'00'|X'00'
 1|0|49|4900|49000000|49000000000|1985-07-21 00:00:00|50.0000|1|001|X'0101'|X'01'
 2|1|48|4800|48000000|48000000000|1985-07-22 00:00:00|33.3333|2|002|X'020202'|X'02'

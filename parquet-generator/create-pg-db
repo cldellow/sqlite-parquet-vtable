@@ -10,7 +10,7 @@ createdb parquet
 here=$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")
 
 psql parquet << EOF
-CREATE TABLE no_nulls(
+CREATE TABLE no_nulls1(
   rowid INT2,
   bool_0 INT2,
   int8_1 INT2,
@@ -25,9 +25,11 @@ CREATE TABLE no_nulls(
   binary_10 TEXT
 );
 
-CREATE TABLE nulls (LIKE no_nulls);
+CREATE TABLE no_nulls2 (LIKE no_nulls1);
+CREATE TABLE nulls (LIKE no_nulls1);
 
-COPY no_nulls FROM '$here/no-nulls.csv';
+COPY no_nulls1 FROM '$here/no-nulls.csv';
+COPY no_nulls2 FROM '$here/no-nulls.csv';
 COPY nulls FROM '$here/nulls.csv';
 
 CREATE OR REPLACE FUNCTION quote(TEXT) RETURNS TEXT AS \$\$
@@ -47,9 +49,4 @@ CREATE OR REPLACE FUNCTION printf(TEXT, DOUBLE PRECISION) RETURNS TEXT AS \$\$
     RETURN CAST(\$2 AS DECIMAL(10, 4))::TEXT;
   END;
 \$\$ LANGUAGE 'plpgsql' IMMUTABLE;
-
-
-
---COPY (SELECT rowid, bool_0, int8_1, int16_2, int32_3, int64_4, datetime(ts_5 / 1000, 'unixepoch'), double_6, string_7, string_8, quote(binary_9), quote(binary_10) FROM nulls LIMIT 3) TO STDOUT WITH (DELIMITER '|', NULL '');
-COPY (SELECT rowid, bool_0, int8_1, int16_2, int32_3, int64_4, datetime(ts_5 / 1000, 'unixepoch'), printf('%.4f', double_6) AS double_6, string_7, string_8, quote(binary_9), quote(binary_10) FROM no_nulls) TO STDOUT WITH (DELIMITER '|', NULL '');
 EOF

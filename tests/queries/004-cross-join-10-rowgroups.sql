@@ -1,3 +1,2 @@
-100-rows-10.parquet
-select count(*) from (select * from test t1, test t2);
+select count(*) from (select * from no_nulls2 t1, no_nulls2 t2);
 10000
