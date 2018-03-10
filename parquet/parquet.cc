@@ -277,6 +277,61 @@ static int parquetEof(sqlite3_vtab_cursor *cur){
   return 0;
 }
 
+void debugConstraints(sqlite3_index_info *pIdxInfo, ParquetTable *table, sqlite3_value** argv) {
+  for(int i = 0; i < pIdxInfo->nConstraint; i++) {
+    std::string valueStr = "?";
+    if(argv != NULL) {
+      int type = sqlite3_value_type(argv[i]);
+      switch(type) {
+        case SQLITE_INTEGER:
+        {
+          sqlite3_int64 rv = sqlite3_value_int64(argv[i]);
+          std::ostringstream ss;
+          ss << rv;
+          valueStr = ss.str();
+          break;
+        }
+        case SQLITE_FLOAT:
+        {
+          double rv = sqlite3_value_double(argv[i]);
+          std::ostringstream ss;
+          ss << rv;
+          valueStr = ss.str();
+          break;
+        }
+        case SQLITE_TEXT:
+        {
+          const unsigned char* rv = sqlite3_value_text(argv[i]);
+          std::ostringstream ss;
+          ss << "'" << rv << "'";
+          valueStr = ss.str();
+          break;
+        }
+        case SQLITE_BLOB:
+        {
+          int sizeBytes = sqlite3_value_bytes(argv[i]);
+          std::ostringstream ss;
+          ss << "'..." << sizeBytes << "-byte blob...'";
+          valueStr = ss.str();
+          break;
+        }
+        case SQLITE_NULL:
+        {
+          valueStr = "NULL";
+          break;
+        }
+      }
+    }
+    printf("  constraint %d: col %s %s %s, usable %d\n",
+        i,
+        table->columnName(pIdxInfo->aConstraint[i].iColumn).data(),
+        opName(pIdxInfo->aConstraint[i].op),
+        valueStr.data(),
+        pIdxInfo->aConstraint[i].usable);
+  }
+}
+
+
 /*
 ** Only a full table scan is supported.  So xFilter simply rewinds to
 ** the beginning.
@@ -288,10 +343,9 @@ static int parquetFilter(
   int argc,
   sqlite3_value **argv
 ){
-  printf("xFilter: idxNum=%d, idxStr=%lu, argc=%d\n", idxNum, (long unsigned int)idxStr, argc);
-  const unsigned char* needle = sqlite3_value_text(argv[0]);
-  printf("  ...%s\n", needle);
   ParquetCursor* cursor = ((sqlite3_vtab_cursor_parquet*)cur)->cursor;
+  printf("xFilter: idxNum=%d, idxStr=%lu, argc=%d\n", idxNum, (long unsigned int)idxStr, argc);
+  debugConstraints((sqlite3_index_info*)idxStr, cursor->getTable(), argv);
   cursor->reset();
   return parquetNext(cur);
 }
@@ -307,16 +361,7 @@ static int parquetBestIndex(
   ParquetTable* table = ((sqlite3_vtab_parquet*)tab)->table;
 
   printf("xBestIndex: nConstraint=%d, nOrderBy=%d\n", pIdxInfo->nConstraint, pIdxInfo->nOrderBy);
-  // Duplicate pIdxInfo and stash it in pIdxInfo->idxStr.
-  for(int i = 0; i < pIdxInfo->nConstraint; i++) {
-    printf("  constraint %d: col %d[%s], op %d[%s], usable %d\n",
-        i,
-        pIdxInfo->aConstraint[i].iColumn,
-        table->columnName(pIdxInfo->aConstraint[i].iColumn).data(),
-        pIdxInfo->aConstraint[i].op,
-        opName(pIdxInfo->aConstraint[i].op),
-        pIdxInfo->aConstraint[i].usable);
-  }
+  debugConstraints(pIdxInfo, table, NULL);
 
   if((pIdxInfo->nConstraint == 0 && pIdxInfo->nOrderBy == 0)) {
     pIdxInfo->estimatedCost = 1000000000000;

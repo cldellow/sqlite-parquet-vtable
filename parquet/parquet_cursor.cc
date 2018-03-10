@@ -328,3 +328,5 @@ void ParquetCursor::reset() {
   numRows = reader->metadata()->num_rows();
   numRowGroups = reader->metadata()->num_row_groups();
 }
+
+ParquetTable* ParquetCursor::getTable() { return table; }

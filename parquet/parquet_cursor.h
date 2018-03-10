@@ -41,6 +41,7 @@ public:
   bool isNull(int col);
   parquet::Type::type getPhysicalType(int col);
   parquet::LogicalType::type getLogicalType(int col);
+  ParquetTable* getTable();
 
   int getInt32(int col);
   long getInt64(int col);
