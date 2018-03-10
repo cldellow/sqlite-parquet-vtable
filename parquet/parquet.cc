@@ -279,14 +279,15 @@ static int parquetEof(sqlite3_vtab_cursor *cur){
 
 void debugConstraints(sqlite3_index_info *pIdxInfo, ParquetTable *table, int argc, sqlite3_value** argv) {
   printf("debugConstraints, argc=%d\n", argc);
+  int j = 0;
   for(int i = 0; i < pIdxInfo->nConstraint; i++) {
     std::string valueStr = "?";
-    if(argv != NULL) {
-      int type = sqlite3_value_type(argv[i]);
+    if(argv != NULL && pIdxInfo->aConstraint[i].usable) {
+      int type = sqlite3_value_type(argv[j]);
       switch(type) {
         case SQLITE_INTEGER:
         {
-          sqlite3_int64 rv = sqlite3_value_int64(argv[i]);
+          sqlite3_int64 rv = sqlite3_value_int64(argv[j]);
           std::ostringstream ss;
           ss << rv;
           valueStr = ss.str();
@@ -294,7 +295,7 @@ void debugConstraints(sqlite3_index_info *pIdxInfo, ParquetTable *table, int arg
         }
         case SQLITE_FLOAT:
         {
-          double rv = sqlite3_value_double(argv[i]);
+          double rv = sqlite3_value_double(argv[j]);
           std::ostringstream ss;
           ss << rv;
           valueStr = ss.str();
@@ -302,7 +303,7 @@ void debugConstraints(sqlite3_index_info *pIdxInfo, ParquetTable *table, int arg
         }
         case SQLITE_TEXT:
         {
-          const unsigned char* rv = sqlite3_value_text(argv[i]);
+          const unsigned char* rv = sqlite3_value_text(argv[j]);
           std::ostringstream ss;
           ss << "'" << rv << "'";
           valueStr = ss.str();
@@ -310,7 +311,7 @@ void debugConstraints(sqlite3_index_info *pIdxInfo, ParquetTable *table, int arg
         }
         case SQLITE_BLOB:
         {
-          int sizeBytes = sqlite3_value_bytes(argv[i]);
+          int sizeBytes = sqlite3_value_bytes(argv[j]);
           std::ostringstream ss;
           ss << "'..." << sizeBytes << "-byte blob...'";
           valueStr = ss.str();
@@ -322,6 +323,7 @@ void debugConstraints(sqlite3_index_info *pIdxInfo, ParquetTable *table, int arg
           break;
         }
       }
+      j++;
     }
     printf("  constraint %d: col %s %s %s, usable %d\n",
         i,
@@ -372,8 +374,12 @@ static int parquetBestIndex(
   } else {
     pIdxInfo->estimatedCost = 1;
     pIdxInfo->idxNum = 1;
+    int j = 0;
     for(int i = 0; i < pIdxInfo->nConstraint; i++) {
-      pIdxInfo->aConstraintUsage[i].argvIndex = i + 1;
+      if(pIdxInfo->aConstraint[i].usable) {
+        j++;
+        pIdxInfo->aConstraintUsage[i].argvIndex = j;
+      }
     }
 
     // TODO: consider setting this when querying by rowid? Unclear if that's implied.
