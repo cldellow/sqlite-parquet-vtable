@@ -277,7 +277,8 @@ static int parquetEof(sqlite3_vtab_cursor *cur){
   return 0;
 }
 
-void debugConstraints(sqlite3_index_info *pIdxInfo, ParquetTable *table, sqlite3_value** argv) {
+void debugConstraints(sqlite3_index_info *pIdxInfo, ParquetTable *table, int argc, sqlite3_value** argv) {
+  printf("debugConstraints, argc=%d\n", argc);
   for(int i = 0; i < pIdxInfo->nConstraint; i++) {
     std::string valueStr = "?";
     if(argv != NULL) {
@@ -345,14 +346,16 @@ static int parquetFilter(
 ){
   ParquetCursor* cursor = ((sqlite3_vtab_cursor_parquet*)cur)->cursor;
   printf("xFilter: idxNum=%d, idxStr=%lu, argc=%d\n", idxNum, (long unsigned int)idxStr, argc);
-  debugConstraints((sqlite3_index_info*)idxStr, cursor->getTable(), argv);
+  debugConstraints((sqlite3_index_info*)idxStr, cursor->getTable(), argc, argv);
   cursor->reset();
   return parquetNext(cur);
 }
 
 /*
-* Only a forward full table scan is supported.  xBestIndex is mostly
-* a no-op.
+* We'll always indicate to SQLite that we prefer it to use an index so that it will
+* pass additional context to xFilter, which we may or may not use.
+*
+* We copy the sqlite3_index_info structure, as is, into idxStr for later use.
 */
 static int parquetBestIndex(
   sqlite3_vtab *tab,
@@ -361,18 +364,20 @@ static int parquetBestIndex(
   ParquetTable* table = ((sqlite3_vtab_parquet*)tab)->table;
 
   printf("xBestIndex: nConstraint=%d, nOrderBy=%d\n", pIdxInfo->nConstraint, pIdxInfo->nOrderBy);
-  debugConstraints(pIdxInfo, table, NULL);
+  debugConstraints(pIdxInfo, table, 0, NULL);
 
-  if((pIdxInfo->nConstraint == 0 && pIdxInfo->nOrderBy == 0)) {
+  if(pIdxInfo->nConstraint == 0) {
     pIdxInfo->estimatedCost = 1000000000000;
     pIdxInfo->idxNum = 0;
-    pIdxInfo->estimatedRows = 10000;
   } else {
     pIdxInfo->estimatedCost = 1;
     pIdxInfo->idxNum = 1;
-    pIdxInfo->estimatedRows = 100000;
-    pIdxInfo->aConstraintUsage[0].argvIndex = 1;
-//    pIdxInfo->idxFlags = SQLITE_INDEX_SCAN_UNIQUE;
+    for(int i = 0; i < pIdxInfo->nConstraint; i++) {
+      pIdxInfo->aConstraintUsage[i].argvIndex = i + 1;
+    }
+
+    // TODO: consider setting this when querying by rowid? Unclear if that's implied.
+    // pIdxInfo->idxFlags = SQLITE_INDEX_SCAN_UNIQUE;
   }
   printf("idx %d has cost %f\n", pIdxInfo->idxNum, pIdxInfo->estimatedCost);
 
