@@ -42,3 +42,6 @@
 /testcase-out.txt
 /testcase-stdout.txt
 /testcase-stderr.txt
+/testcase-expected.txt
+/testcase-cmds.txt
+/testcases.txt

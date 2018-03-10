@@ -24,18 +24,36 @@ main() {
   root=$(readlink -f "$root")
   cd "$root"
 
-  queries=$(find tests/queries -type f -name '*.sql' | sort)
-  while read -r file; do
-    echo "Testing: $file"
-    query=$(head -n1 "$file" | tail -n1)
-    results=$(tail -n+2 "$file")
-    if ! "$root"/sqlite/sqlite3 -init <(run_query "$file" "$query") < /dev/null > testcase-stdout.txt 2> testcase-stderr.txt; then
-      echo "...FAILED; check testcase-{out,err}.txt" >&2
-      exit 1
-    fi
+  find_cmd=(find tests/queries -type f -name '*.sql')
+  debug=0
+  if [ -n "${1:-""}" ]; then
+    find_cmd+=(-regex ".*$1.*")
+    debug=1
+  fi
 
-    diff testcase-out.txt <(echo "$results")
-  done < <(echo "$queries")
+  "${find_cmd[@]}" | sort > testcases.txt
+
+  if [ ! -s testcases.txt ]; then
+    echo "no matching testcases found"
+    exit 1
+  fi
+
+  if [ "$(cat testcases.txt | wc -l)" == "1" ]; then
+    gdb -ex run --args "$root"/sqlite/sqlite3 -init testcase-cmds.txt
+  else
+    while read -r file; do
+      echo "Testing: $file"
+      query=$(head -n1 "$file" | tail -n1)
+      tail -n+2 "$file" > testcase-expected.txt
+
+      run_query "$file" "$query" > testcase-cmds.txt
+      if ! "$root"/sqlite/sqlite3 -init testcase-cmds.txt < /dev/null > testcase-stdout.txt 2> testcase-stderr.txt; then
+        echo "...FAILED; check testcase-{out,err}.txt" >&2
+        exit 1
+      fi
+      diff testcase-out.txt testcase-expected.txt
+    done < testcases.txt
+  fi
 }
 
 main "$@"
