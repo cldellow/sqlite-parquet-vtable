@@ -98,4 +98,3 @@ select string_7 from no_nulls1 order by string_7
 96
 97
 98
-99

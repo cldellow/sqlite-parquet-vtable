@@ -1,2 +1,2 @@
-select rowid from nulls where binary_10 > x'61';
-99
+select rowid from nulls where binary_10 > x'60';
+97

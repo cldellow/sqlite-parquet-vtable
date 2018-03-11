@@ -4,11 +4,11 @@ import re
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-def make_100_rows():
-    '''Create 100 rows with unique values in each field, exercising all the main
+def make_99_rows():
+    '''Create 99 rows with unique values in each field, exercising all the main
        physical types.'''
     rows = []
-    for i in range(100):
+    for i in range(99):
         ba_fixed = bytearray()
         ba_fixed.append(i)
         ba_variable = bytearray()
@@ -22,7 +22,7 @@ def make_100_rows():
         row.append(1000 * 1000 * (50 - i)) # INT32/INT32
         row.append(1000 * 1000 * 1000 * (50 - i)) # INT64/INT64
         row.append(datetime(1985, 7, 20, tzinfo=timezone.utc) + timedelta(days=i)) # INT96
-        row.append(100.0 / (i + 1)) # DOUBLE
+        row.append(99.0 / (i + 1)) # DOUBLE
         row.append(str(i)) # BYTE_ARRAY/UTF8
         row.append('{:03}'.format(i)), # BYTE_ARRAY/UTF8
         row.append(bytes(ba_variable)), # BYTE_ARRAY
@@ -33,8 +33,8 @@ def make_100_rows():
         rows.append(row)
     return rows
 
-def get_100_rows_types():
-    '''The types for the columns in `make_100_rows`.'''
+def get_99_rows_types():
+    '''The types for the columns in `make_99_rows`.'''
     return [
         pa.bool_(),
         pa.int8(),
@@ -130,18 +130,18 @@ def write_csv(file_name, rows):
 
 def main():
     '''Entrypoint.'''
-    rows = make_100_rows()
-    types = get_100_rows_types()
+    rows = make_99_rows()
+    types = get_99_rows_types()
 
-    write_parquet('100-rows-1.parquet', rows, types, row_group_size=100)
+    write_parquet('99-rows-1.parquet', rows, types, row_group_size=99)
     write_csv('no-nulls.csv', rows)
-    write_parquet('100-rows-10.parquet', rows, types, row_group_size=10)
+    write_parquet('99-rows-10.parquet', rows, types, row_group_size=10)
 
     for i in range(len(rows)):
         for j in range(len(rows[i])):
             if (i >= 10 and i <= 19) or (i >= 20 and (i + j) % 2 == 0):
                 rows[i][j] = None
-    write_parquet('100-rows-nulls.parquet', rows, types,row_group_size=10)
+    write_parquet('99-rows-nulls.parquet', rows, types,row_group_size=10)
     write_csv('nulls.csv', rows)
 
     write_unsupported_parquets()

@@ -48,4 +48,3 @@ select rowid, bool_0, quote(binary_10) from nulls where string_7 is null
 93|0|X'5D'
 95|0|X'5F'
 97|0|X'61'
-99|0|X'63'

@@ -12,9 +12,9 @@ run_query() {
 .load parquet/libparquet
 .testcase $basename
 .bail on
-CREATE VIRTUAL TABLE nulls USING parquet('$root/parquet-generator/100-rows-nulls.parquet');
-CREATE VIRTUAL TABLE no_nulls1 USING parquet('$root/parquet-generator/100-rows-1.parquet');
-CREATE VIRTUAL TABLE no_nulls2 USING parquet('$root/parquet-generator/100-rows-10.parquet');
+CREATE VIRTUAL TABLE nulls USING parquet('$root/parquet-generator/99-rows-nulls.parquet');
+CREATE VIRTUAL TABLE no_nulls1 USING parquet('$root/parquet-generator/99-rows-1.parquet');
+CREATE VIRTUAL TABLE no_nulls2 USING parquet('$root/parquet-generator/99-rows-10.parquet');
 $query;
 .output
 EOF

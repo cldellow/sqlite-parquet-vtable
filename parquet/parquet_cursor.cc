@@ -13,7 +13,7 @@ bool ParquetCursor::nextRowGroup() {
 
   rowGroupStartRowId = rowId;
   rowGroupId++;
-  rowGroupMetadata = reader->metadata()->RowGroup(0);
+  rowGroupMetadata = reader->metadata()->RowGroup(rowGroupId);
   rowsLeftInRowGroup = rowGroupMetadata->num_rows();
   rowGroup = reader->RowGroup(rowGroupId);
   for(unsigned int i = 0; i < scanners.size(); i++)

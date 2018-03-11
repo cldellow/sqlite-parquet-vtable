@@ -1,2 +1,2 @@
 select count(*) from (select * from no_nulls1 t1, no_nulls1 t2);
-10000
+9801

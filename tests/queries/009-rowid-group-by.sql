@@ -8,4 +8,4 @@ select rowid % 10, count(*) from nulls group by 1 order by 1
 6|10
 7|10
 8|10
-9|10
+9|9

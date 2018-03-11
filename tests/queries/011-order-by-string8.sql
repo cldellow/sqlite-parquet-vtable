@@ -98,4 +98,3 @@ select string_8 from no_nulls1 order by string_8
 096
 097
 098
-099
