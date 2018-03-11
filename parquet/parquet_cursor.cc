@@ -3,7 +3,7 @@
 ParquetCursor::ParquetCursor(ParquetTable* table) {
   this->table = table;
   reader = NULL;
-  reset();
+  reset(std::vector<Constraint>());
 }
 
 bool ParquetCursor::nextRowGroup() {
@@ -39,7 +39,26 @@ bool ParquetCursor::nextRowGroup() {
   return true;
 }
 
+// Return true if it is _possible_ that the current
+// row satisfies the constraints. Only return false
+// if it definitely does not.
+bool ParquetCursor::currentRowSatisfiesFilter() {
+  for(unsigned int i = 0; i < constraints.size(); i++) {
+    int column = constraints[i].getColumn();
+    ensureColumn(column);
+    int op = constraints[i].getOperator();
+
+    if(op == IsNull) {
+      return isNull(column);
+    } else if(op == IsNotNull) {
+      return !isNull(column);
+    }
+  }
+  return true;
+}
+
 void ParquetCursor::next() {
+start:
   if(rowsLeftInRowGroup == 0) {
     if(!nextRowGroup()) {
       // put rowId over the edge so eof returns true
@@ -50,6 +69,8 @@ void ParquetCursor::next() {
 
   rowsLeftInRowGroup--;
   rowId++;
+  if(!currentRowSatisfiesFilter())
+    goto start;
 }
 
 int ParquetCursor::getRowId() {
@@ -61,6 +82,10 @@ bool ParquetCursor::eof() {
 }
 
 void ParquetCursor::ensureColumn(int col) {
+  // -1 signals rowid, which is trivially available
+  if(col == -1)
+    return;
+
   // need to ensure a scanner exists (and skip the # of rows in the rowgroup)
   while((unsigned int)col >= scanners.size()) {
     scanners.push_back(std::shared_ptr<parquet::Scanner>());
@@ -280,6 +305,10 @@ void ParquetCursor::ensureColumn(int col) {
 }
 
 bool ParquetCursor::isNull(int col) {
+  // -1 is rowid, which is trivially non null
+  if(col == -1)
+    return false;
+
   return colNulls[col];
 }
 
@@ -313,8 +342,9 @@ void ParquetCursor::close() {
   }
 }
 
-void ParquetCursor::reset() {
+void ParquetCursor::reset(std::vector<Constraint> constraints) {
   close();
+  this->constraints = constraints;
   rowId = -1;
   // TODO: consider having a long lived handle in ParquetTable that can be borrowed
   // without incurring the cost of opening the file from scratch twice

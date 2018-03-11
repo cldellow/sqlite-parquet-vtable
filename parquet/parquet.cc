@@ -22,6 +22,7 @@ SQLITE_EXTENSION_INIT1
 
 #include "parquet_table.h"
 #include "parquet_cursor.h"
+#include "parquet_filter.h"
 
 /* Forward references to the various virtual table methods implemented
  * in this file. */
@@ -334,6 +335,42 @@ void debugConstraints(sqlite3_index_info *pIdxInfo, ParquetTable *table, int arg
   }
 }
 
+ConstraintOperator constraintOperatorFromSqlite(int op) {
+  switch(op) {
+    case SQLITE_INDEX_CONSTRAINT_EQ:
+      return Equal;
+    case SQLITE_INDEX_CONSTRAINT_GT:
+      return GreaterThan;
+    case SQLITE_INDEX_CONSTRAINT_LE:
+      return LessThanOrEqual;
+    case SQLITE_INDEX_CONSTRAINT_LT:
+      return LessThan;
+    case SQLITE_INDEX_CONSTRAINT_GE:
+      return GreaterThanOrEqual;
+    case SQLITE_INDEX_CONSTRAINT_MATCH:
+      return Match;
+    case SQLITE_INDEX_CONSTRAINT_LIKE:
+      return Like;
+    case SQLITE_INDEX_CONSTRAINT_GLOB:
+      return Glob;
+    case SQLITE_INDEX_CONSTRAINT_REGEXP:
+      return Regexp;
+    case SQLITE_INDEX_CONSTRAINT_NE:
+      return NotEqual;
+    case SQLITE_INDEX_CONSTRAINT_ISNOT:
+      return IsNot;
+    case SQLITE_INDEX_CONSTRAINT_ISNOTNULL:
+      return IsNotNull;
+    case SQLITE_INDEX_CONSTRAINT_ISNULL:
+      return IsNull;
+    case SQLITE_INDEX_CONSTRAINT_IS:
+      return Is;
+  }
+
+  std::ostringstream ss;
+  ss << __FILE__ << ":" << __LINE__ << ": operator " << op << " is unsupported";
+  throw std::invalid_argument(ss.str());
+}
 
 /*
 ** Only a full table scan is supported.  So xFilter simply rewinds to
@@ -348,8 +385,58 @@ static int parquetFilter(
 ){
   ParquetCursor* cursor = ((sqlite3_vtab_cursor_parquet*)cur)->cursor;
   printf("xFilter: idxNum=%d, idxStr=%lu, argc=%d\n", idxNum, (long unsigned int)idxStr, argc);
-  debugConstraints((sqlite3_index_info*)idxStr, cursor->getTable(), argc, argv);
-  cursor->reset();
+  sqlite3_index_info* indexInfo = (sqlite3_index_info*)idxStr;
+  debugConstraints(indexInfo, cursor->getTable(), argc, argv);
+  std::vector<Constraint> constraints;
+  int j = 0;
+  for(int i = 0; i < indexInfo->nConstraint; i++) {
+    if(!indexInfo->aConstraint[i].usable) {
+      continue;
+    }
+
+    ValueType type = Null;
+    bool boolValue = false;
+    uintptr_t intValue = 0;
+    double doubleValue = 0;
+    std::vector<unsigned char> blobValue;
+    int sqliteType = sqlite3_value_type(argv[j]);
+
+    if(sqliteType == SQLITE_INTEGER) {
+      type = Integer;
+      intValue = sqlite3_value_int64(argv[j]);
+    } else if(sqliteType == SQLITE_FLOAT) {
+      type = Double;
+      doubleValue = sqlite3_value_double(argv[j]);
+    } else if(sqliteType == SQLITE_TEXT) {
+      type = Text;
+      int len = sqlite3_value_bytes(argv[j]);
+      const unsigned char* ptr = sqlite3_value_text(argv[j]);
+      for(int k = 0; k < len; k++) {
+        blobValue.push_back(ptr[k]);
+      }
+    } else if(sqliteType == SQLITE_BLOB) {
+      type = Blob;
+      int len = sqlite3_value_bytes(argv[j]);
+      const unsigned char* ptr = (const unsigned char*)sqlite3_value_blob(argv[j]);
+      for(int k = 0; k < len; k++) {
+        blobValue.push_back(ptr[k]);
+      }
+    } else if(sqliteType == SQLITE_NULL) {
+      type = Null;
+    }
+
+    Constraint constraint(
+      indexInfo->aConstraint[i].iColumn,
+      constraintOperatorFromSqlite(indexInfo->aConstraint[i].op),
+      type,
+      boolValue,
+      intValue,
+      doubleValue,
+      blobValue);
+    constraints.push_back(constraint);
+    j++;
+  }
+  cursor->reset(constraints);
   return parquetNext(cur);
 }
 

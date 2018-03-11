@@ -1,6 +1,7 @@
 #ifndef PARQUET_CURSOR_H
 #define PARQUET_CURSOR_H
 
+#include "parquet_filter.h"
 #include "parquet_table.h"
 #include "parquet/api/reader.h"
 
@@ -29,12 +30,15 @@ class ParquetCursor {
 
   bool nextRowGroup();
 
+  std::vector<Constraint> constraints;
+
 public:
   ParquetCursor(ParquetTable* table);
   int getRowId();
+  bool currentRowSatisfiesFilter();
   void next();
   void close();
-  void reset();
+  void reset(std::vector<Constraint> constraints);
   bool eof();
 
   void ensureColumn(int col);
