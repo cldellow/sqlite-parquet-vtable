@@ -6,8 +6,35 @@ ParquetCursor::ParquetCursor(ParquetTable* table) {
   reset(std::vector<Constraint>());
 }
 
+// Return true if it is _possible_ that the current
+// rowgroup satisfies the constraints. Only return false
+// if it definitely does not.
+//
+// This avoids opening rowgroups that can't return useful
+// data, which provides substantial performance benefits.
+bool ParquetCursor::currentRowGroupSatisfiesFilter() {
+  for(unsigned int i = 0; i < constraints.size(); i++) {
+    int column = constraints[i].getColumn();
+    int op = constraints[i].getOperator();
+    bool rv = true;
+
+//    printf("column = %d\n", column);
+//    std::unique_ptr<parquet::ColumnChunkMetaData> md = rowGroupMetadata->ColumnChunk(column);
+
+    if(op == IsNull) {
+    } else if(op == IsNotNull) {
+    }
+
+    if(!rv)
+      return false;
+  }
+
+  return true;
+}
+
+
 bool ParquetCursor::nextRowGroup() {
-  // TODO: skip row groups that cannot satisfy the constraints
+start:
   if((rowGroupId + 1) >= numRowGroups)
     return false;
 
@@ -36,23 +63,34 @@ bool ParquetCursor::nextRowGroup() {
     colRows[i] = rowId;
   }
 
+  if(!currentRowGroupSatisfiesFilter())
+    goto start;
+
   return true;
 }
 
 // Return true if it is _possible_ that the current
 // row satisfies the constraints. Only return false
 // if it definitely does not.
+//
+// This avoids pointless transitions between the SQLite VM
+// and the extension, which can add up on a dataset of tens
+// of millions of rows.
 bool ParquetCursor::currentRowSatisfiesFilter() {
   for(unsigned int i = 0; i < constraints.size(); i++) {
+    bool rv = true;
     int column = constraints[i].getColumn();
     ensureColumn(column);
     int op = constraints[i].getOperator();
 
     if(op == IsNull) {
-      return isNull(column);
+      rv = isNull(column);
     } else if(op == IsNotNull) {
-      return !isNull(column);
+      rv = !isNull(column);
     }
+
+    if(!rv)
+      return false;
   }
   return true;
 }

@@ -36,6 +36,7 @@ public:
   ParquetCursor(ParquetTable* table);
   int getRowId();
   bool currentRowSatisfiesFilter();
+  bool currentRowGroupSatisfiesFilter();
   void next();
   void close();
   void reset(std::vector<Constraint> constraints);
