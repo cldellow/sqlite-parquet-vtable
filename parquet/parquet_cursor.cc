@@ -18,11 +18,17 @@ bool ParquetCursor::currentRowGroupSatisfiesFilter() {
     int op = constraints[i].getOperator();
     bool rv = true;
 
-//    printf("column = %d\n", column);
-//    std::unique_ptr<parquet::ColumnChunkMetaData> md = rowGroupMetadata->ColumnChunk(column);
+    if(column == -1) {
+      if(op == IsNull) {
+        return false;
+      }
+    } else {
+  //    printf("column = %d\n", column);
+  //    std::unique_ptr<parquet::ColumnChunkMetaData> md = rowGroupMetadata->ColumnChunk(column);
 
-    if(op == IsNull) {
-    } else if(op == IsNotNull) {
+      if(op == IsNull) {
+      } else if(op == IsNotNull) {
+      }
     }
 
     if(!rv)
