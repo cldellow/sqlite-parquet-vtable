@@ -44,11 +44,16 @@ bool ParquetCursor::currentRowGroupSatisfiesFilter() {
     if(column == -1) {
       rv = currentRowGroupSatisfiesRowIdFilter(constraints[i]);
     } else {
-  //    printf("column = %d\n", column);
-  //    std::unique_ptr<parquet::ColumnChunkMetaData> md = rowGroupMetadata->ColumnChunk(column);
+      std::unique_ptr<parquet::ColumnChunkMetaData> md = rowGroupMetadata->ColumnChunk(column);
+      if(!md->is_stats_set()) {
+        continue;
+      }
+      std::shared_ptr<parquet::RowGroupStatistics> stats = md->statistics();
 
       if(op == IsNull) {
+        rv = stats->null_count() > 0;
       } else if(op == IsNotNull) {
+        rv = stats->num_values() > 0;
       }
     }
 

@@ -39,7 +39,7 @@ main() {
     exit 1
   fi
 
-  if [ "$(cat testcases.txt | wc -l)" == "1" ]; then
+  if [ ! -v NO_DEBUG ] && [ "$(cat testcases.txt | wc -l)" == "1" ]; then
     set -x
     gdb -ex run --args "$root"/sqlite/sqlite3 -init testcase-cmds.txt
   else
