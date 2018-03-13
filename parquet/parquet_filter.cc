@@ -4,7 +4,6 @@ Constraint::Constraint(
   int column,
   ConstraintOperator op,
   ValueType type,
-  bool boolValue,
   int64_t intValue,
   double doubleValue,
   std::vector<unsigned char> blobValue
@@ -12,7 +11,6 @@ Constraint::Constraint(
   this->column = column;
   this->op = op;
   this->type = type;
-  this->boolValue = boolValue;
   this->intValue = intValue;
   this->doubleValue = doubleValue;
   this->blobValue = blobValue;
@@ -28,10 +26,6 @@ ConstraintOperator Constraint::getOperator() {
 
 ValueType Constraint::getType() {
   return type;
-}
-
-bool Constraint::getBool() {
-  return boolValue;
 }
 
 int64_t Constraint::getInt() {

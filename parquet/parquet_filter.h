@@ -35,7 +35,6 @@ class Constraint {
   ConstraintOperator op;
   ValueType type;
 
-  bool boolValue;
   int64_t intValue;
   double doubleValue;
   // Doubles as string value
@@ -47,7 +46,6 @@ public:
     int column,
     ConstraintOperator op,
     ValueType type,
-    bool boolValue,
     int64_t intValue,
     double doubleValue,
     std::vector<unsigned char> blobValue
@@ -56,7 +54,6 @@ public:
   int getColumn();
   ConstraintOperator getOperator();
   ValueType getType();
-  bool getBool();
   int64_t getInt();
   double getDouble();
   std::vector<unsigned char> getBytes();

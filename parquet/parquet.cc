@@ -395,7 +395,6 @@ static int parquetFilter(
     }
 
     ValueType type = Null;
-    bool boolValue = false;
     int64_t intValue = 0;
     double doubleValue = 0;
     std::vector<unsigned char> blobValue;
@@ -429,7 +428,6 @@ static int parquetFilter(
       indexInfo->aConstraint[i].iColumn,
       constraintOperatorFromSqlite(indexInfo->aConstraint[i].op),
       type,
-      boolValue,
       intValue,
       doubleValue,
       blobValue);
