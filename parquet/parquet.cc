@@ -396,7 +396,7 @@ static int parquetFilter(
 
     ValueType type = Null;
     bool boolValue = false;
-    uintptr_t intValue = 0;
+    int64_t intValue = 0;
     double doubleValue = 0;
     std::vector<unsigned char> blobValue;
     int sqliteType = sqlite3_value_type(argv[j]);

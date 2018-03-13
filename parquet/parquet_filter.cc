@@ -5,7 +5,7 @@ Constraint::Constraint(
   ConstraintOperator op,
   ValueType type,
   bool boolValue,
-  uintptr_t intValue,
+  int64_t intValue,
   double doubleValue,
   std::vector<unsigned char> blobValue
 ) {
@@ -34,7 +34,7 @@ bool Constraint::getBool() {
   return boolValue;
 }
 
-uintptr_t Constraint::getInt() {
+int64_t Constraint::getInt() {
   return intValue;
 }
 

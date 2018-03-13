@@ -17,13 +17,14 @@ class ParquetCursor {
 
   std::vector<int> colRows;
   std::vector<bool> colNulls;
-  std::vector<uintptr_t> colIntValues;
+  std::vector<int64_t> colIntValues;
   std::vector<double> colDoubleValues;
   std::vector<parquet::ByteArray> colByteArrayValues;
 
   int rowId;
   int rowGroupId;
   int rowGroupStartRowId;
+  int rowGroupSize;
   int numRows;
   int numRowGroups;
   int rowsLeftInRowGroup;
@@ -32,11 +33,13 @@ class ParquetCursor {
 
   std::vector<Constraint> constraints;
 
+  bool currentRowGroupSatisfiesRowIdFilter(Constraint constraint);
+  bool currentRowSatisfiesFilter();
+  bool currentRowGroupSatisfiesFilter();
+
 public:
   ParquetCursor(ParquetTable* table);
   int getRowId();
-  bool currentRowSatisfiesFilter();
-  bool currentRowGroupSatisfiesFilter();
   void next();
   void close();
   void reset(std::vector<Constraint> constraints);
