@@ -23,7 +23,6 @@ enum ConstraintOperator {
 
 enum ValueType {
   Null,
-  Boolean,
   Integer,
   Double,
   Blob,

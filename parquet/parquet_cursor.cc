@@ -29,6 +29,52 @@ bool ParquetCursor::currentRowGroupSatisfiesRowIdFilter(Constraint constraint) {
   }
 }
 
+bool ParquetCursor::currentRowGroupSatisfiesTextFilter(Constraint constraint, std::shared_ptr<parquet::RowGroupStatistics> _stats) {
+  std::vector<unsigned char> target = constraint.getBytes();
+  parquet::TypedRowGroupStatistics<parquet::DataType<parquet::Type::BYTE_ARRAY>>* stats =
+    (parquet::TypedRowGroupStatistics<parquet::DataType<parquet::Type::BYTE_ARRAY>>*)_stats.get();
+
+  // TODO: parquet-cpp doesn't seem to support stats for UTF8?
+  // 1) empirically, the following is false on a few parquets I've tested
+  // 2) https://github.com/apache/parquet-cpp/blob/master/src/parquet/metadata.cc#L116 seems to say UTF8 not supported
+  // 3) OTOH, https://issues.apache.org/jira/browse/ARROW-1982 seems to say it's supported
+  if(!stats->HasMinMax()) {
+    return true;
+  }
+
+  /*
+  parquet::ByteArray min = stats->min();
+  parquet::ByteArray max = stats->max();
+  std::string minStr((const char*)min.ptr, min.len);
+  std::string maxStr((const char*)max.ptr, max.len);
+  printf("min=%s [%d], max=%s [%d]\n", minStr.data(), min.len, maxStr.data(), max.len);
+  */
+
+  switch(constraint.getOperator()) {
+    case Is:
+    case Equal:
+
+    case GreaterThan:
+    case GreaterThanOrEqual:
+    case LessThan:
+    case LessThanOrEqual:
+    case IsNot:
+    case NotEqual:
+    case Like:
+
+    default:
+      return true;
+  }
+}
+
+bool ParquetCursor::currentRowGroupSatisfiesIntegerFilter(Constraint constraint, std::shared_ptr<parquet::RowGroupStatistics> stats) {
+  return true;
+}
+
+bool ParquetCursor::currentRowGroupSatisfiesDoubleFilter(Constraint constraint, std::shared_ptr<parquet::RowGroupStatistics> stats) {
+  return true;
+}
+
 // Return true if it is _possible_ that the current
 // rowgroup satisfies the constraints. Only return false
 // if it definitely does not.
@@ -37,6 +83,7 @@ bool ParquetCursor::currentRowGroupSatisfiesRowIdFilter(Constraint constraint) {
 // data, which provides substantial performance benefits.
 bool ParquetCursor::currentRowGroupSatisfiesFilter() {
   for(unsigned int i = 0; i < constraints.size(); i++) {
+    ValueType type = constraints[i].getType();
     int column = constraints[i].getColumn();
     int op = constraints[i].getOperator();
     bool rv = true;
@@ -54,6 +101,12 @@ bool ParquetCursor::currentRowGroupSatisfiesFilter() {
         rv = stats->null_count() > 0;
       } else if(op == IsNotNull) {
         rv = stats->num_values() > 0;
+      } else if(type == Text) {
+        rv = currentRowGroupSatisfiesTextFilter(constraints[i], stats);
+      } else if(type == Integer) {
+        rv = currentRowGroupSatisfiesIntegerFilter(constraints[i], stats);
+      } else if(type == Double) {
+        rv = currentRowGroupSatisfiesDoubleFilter(constraints[i], stats);
       }
     }
 
