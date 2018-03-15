@@ -5,7 +5,7 @@ CC = g++
 CFLAGS = -I ../sqlite -O3 -std=c++11 -Wall -fPIC -g
 PARQUET_LIB = $(PARQUET_CPP)/build/release/libparquet.a
 THRIFT_LIB = $(PARQUET_CPP)/thrift_ep/src/thrift_ep-install/lib/libthrift.a
-ARROW_LIB = $(PARQUET_CPP)/build/release/libarrow.so
+ARROW_LIB = /usr/local/lib/libarrow.so
 BOOST_LIB = /usr/lib/x86_64-linux-gnu/libboost_regex.so
 
 LDFLAGS = -O3 $(PARQUET_LIB) $(THRIFT_LIB) $(ARROW_LIB) $(BOOST_LIB)

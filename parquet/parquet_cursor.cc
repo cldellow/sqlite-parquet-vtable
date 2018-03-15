@@ -34,21 +34,15 @@ bool ParquetCursor::currentRowGroupSatisfiesTextFilter(Constraint constraint, st
   parquet::TypedRowGroupStatistics<parquet::DataType<parquet::Type::BYTE_ARRAY>>* stats =
     (parquet::TypedRowGroupStatistics<parquet::DataType<parquet::Type::BYTE_ARRAY>>*)_stats.get();
 
-  // TODO: parquet-cpp doesn't seem to support stats for UTF8?
-  // 1) empirically, the following is false on a few parquets I've tested
-  // 2) https://github.com/apache/parquet-cpp/blob/master/src/parquet/metadata.cc#L116 seems to say UTF8 not supported
-  // 3) OTOH, https://issues.apache.org/jira/browse/ARROW-1982 seems to say it's supported
   if(!stats->HasMinMax()) {
     return true;
   }
 
-  /*
   parquet::ByteArray min = stats->min();
   parquet::ByteArray max = stats->max();
   std::string minStr((const char*)min.ptr, min.len);
   std::string maxStr((const char*)max.ptr, max.len);
   printf("min=%s [%d], max=%s [%d]\n", minStr.data(), min.len, maxStr.data(), max.len);
-  */
 
   switch(constraint.getOperator()) {
     case Is:
@@ -483,7 +477,11 @@ void ParquetCursor::reset(std::vector<Constraint> constraints) {
   rowId = -1;
   // TODO: consider having a long lived handle in ParquetTable that can be borrowed
   // without incurring the cost of opening the file from scratch twice
-  reader = parquet::ParquetFileReader::OpenFile(table->file.data());
+  reader = parquet::ParquetFileReader::OpenFile(
+      table->file.data(),
+      true,
+      parquet::default_reader_properties(),
+      table->getMetadata());
 
   rowGroupId = -1;
   rowGroupSize = 0;

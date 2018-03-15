@@ -4,6 +4,9 @@
 
 ParquetTable::ParquetTable(std::string file) {
   this->file = file;
+
+  std::unique_ptr<parquet::ParquetFileReader> reader = parquet::ParquetFileReader::OpenFile(file.data());
+  metadata = reader->metadata();
 }
 
 std::string ParquetTable::columnName(int i) {
@@ -13,7 +16,11 @@ std::string ParquetTable::columnName(int i) {
 }
 
 std::string ParquetTable::CreateStatement() {
-  std::unique_ptr<parquet::ParquetFileReader> reader = parquet::ParquetFileReader::OpenFile(file.data());
+  std::unique_ptr<parquet::ParquetFileReader> reader = parquet::ParquetFileReader::OpenFile(
+      file.data(),
+      true,
+      parquet::default_reader_properties(),
+      metadata);
   std::string text("CREATE TABLE x(");
   auto schema = reader->metadata()->schema();
 
@@ -129,3 +136,5 @@ std::string ParquetTable::CreateStatement() {
   text +=");";
   return text;
 }
+
+std::shared_ptr<parquet::FileMetaData> ParquetTable::getMetadata() { return metadata; }
