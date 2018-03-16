@@ -2,6 +2,7 @@
 #define PARQUET_FILTER_H
 
 #include <vector>
+#include <string>
 #include <cstdint>
 
 enum ConstraintOperator {
@@ -36,8 +37,9 @@ class Constraint {
 
   int64_t intValue;
   double doubleValue;
-  // Doubles as string value
   std::vector<unsigned char> blobValue;
+  // Only set when blobValue is set
+  std::string stringValue;
 
 public:
   // Kind of a messy constructor function, but it's just for internal use, so whatever.
@@ -55,7 +57,8 @@ public:
   ValueType getType();
   int64_t getInt();
   double getDouble();
-  std::vector<unsigned char> getBytes();
+  const std::vector<unsigned char> getBytes();
+  std::string getString();
 };
 
 #endif

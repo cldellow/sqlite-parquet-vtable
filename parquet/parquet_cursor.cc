@@ -38,16 +38,21 @@ bool ParquetCursor::currentRowGroupSatisfiesTextFilter(Constraint constraint, st
     return true;
   }
 
+  if(constraint.getType() != Text) {
+    return true;
+  }
+
+  std::string str = constraint.getString();
   parquet::ByteArray min = stats->min();
   parquet::ByteArray max = stats->max();
   std::string minStr((const char*)min.ptr, min.len);
   std::string maxStr((const char*)max.ptr, max.len);
-  printf("min=%s [%d], max=%s [%d]\n", minStr.data(), min.len, maxStr.data(), max.len);
+//  printf("min=%s [%d], max=%s [%d], target=%s\n", minStr.data(), min.len, maxStr.data(), max.len, str.data());
 
   switch(constraint.getOperator()) {
     case Is:
     case Equal:
-
+      return str >= minStr && str <= maxStr;
     case GreaterThan:
     case GreaterThanOrEqual:
     case LessThan:
@@ -77,7 +82,6 @@ bool ParquetCursor::currentRowGroupSatisfiesDoubleFilter(Constraint constraint, 
 // data, which provides substantial performance benefits.
 bool ParquetCursor::currentRowGroupSatisfiesFilter() {
   for(unsigned int i = 0; i < constraints.size(); i++) {
-    ValueType type = constraints[i].getType();
     int column = constraints[i].getColumn();
     int op = constraints[i].getOperator();
     bool rv = true;

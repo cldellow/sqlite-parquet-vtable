@@ -14,6 +14,9 @@ Constraint::Constraint(
   this->intValue = intValue;
   this->doubleValue = doubleValue;
   this->blobValue = blobValue;
+
+  if(type == Text)
+    stringValue = std::string((char*)&blobValue[0], blobValue.size());
 }
 
 int Constraint::getColumn() {
@@ -36,6 +39,10 @@ double Constraint::getDouble() {
   return doubleValue;
 }
 
-std::vector<unsigned char> Constraint::getBytes() {
+const std::vector<unsigned char> Constraint::getBytes() {
   return blobValue;
+}
+
+std::string Constraint::getString() {
+  return stringValue;
 }
