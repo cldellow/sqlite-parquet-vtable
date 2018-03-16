@@ -6,7 +6,7 @@ ParquetCursor::ParquetCursor(ParquetTable* table) {
   reset(std::vector<Constraint>());
 }
 
-bool ParquetCursor::currentRowGroupSatisfiesRowIdFilter(Constraint constraint) {
+bool ParquetCursor::currentRowGroupSatisfiesRowIdFilter(Constraint& constraint) {
   int64_t target = constraint.getInt();
   switch(constraint.getOperator()) {
     case IsNull:
@@ -29,7 +29,7 @@ bool ParquetCursor::currentRowGroupSatisfiesRowIdFilter(Constraint constraint) {
   }
 }
 
-bool ParquetCursor::currentRowGroupSatisfiesTextFilter(Constraint constraint, std::shared_ptr<parquet::RowGroupStatistics> _stats) {
+bool ParquetCursor::currentRowGroupSatisfiesTextFilter(Constraint& constraint, std::shared_ptr<parquet::RowGroupStatistics> _stats) {
   std::vector<unsigned char> target = constraint.getBytes();
   parquet::TypedRowGroupStatistics<parquet::DataType<parquet::Type::BYTE_ARRAY>>* stats =
     (parquet::TypedRowGroupStatistics<parquet::DataType<parquet::Type::BYTE_ARRAY>>*)_stats.get();
@@ -66,13 +66,51 @@ bool ParquetCursor::currentRowGroupSatisfiesTextFilter(Constraint constraint, st
   }
 }
 
-bool ParquetCursor::currentRowGroupSatisfiesIntegerFilter(Constraint constraint, std::shared_ptr<parquet::RowGroupStatistics> stats) {
+bool ParquetCursor::currentRowGroupSatisfiesIntegerFilter(Constraint& constraint, std::shared_ptr<parquet::RowGroupStatistics> stats) {
   return true;
 }
 
-bool ParquetCursor::currentRowGroupSatisfiesDoubleFilter(Constraint constraint, std::shared_ptr<parquet::RowGroupStatistics> stats) {
+bool ParquetCursor::currentRowGroupSatisfiesDoubleFilter(Constraint& constraint, std::shared_ptr<parquet::RowGroupStatistics> stats) {
   return true;
 }
+
+bool ParquetCursor::currentRowSatisfiesTextFilter(Constraint& constraint) {
+  if(constraint.getType() != Text) {
+    return true;
+  }
+
+  std::vector<unsigned char> blob = constraint.getBytes();
+  parquet::ByteArray* ba = getByteArray(constraint.getColumn());
+
+  switch(constraint.getOperator()) {
+    case Is:
+    case Equal:
+      if(blob.size() != ba->len)
+        return false;
+
+      return 0 == memcmp(&blob[0], ba->ptr, ba->len);
+    case GreaterThan:
+    case GreaterThanOrEqual:
+    case LessThan:
+    case LessThanOrEqual:
+    case IsNot:
+    case NotEqual:
+    case Like:
+
+    default:
+      return true;
+  }
+
+}
+
+bool ParquetCursor::currentRowSatisfiesIntegerFilter(Constraint& constraint) {
+  return true;
+}
+
+bool ParquetCursor::currentRowSatisfiesDoubleFilter(Constraint& constraint) {
+  return true;
+}
+
 
 // Return true if it is _possible_ that the current
 // rowgroup satisfies the constraints. Only return false
@@ -194,6 +232,19 @@ bool ParquetCursor::currentRowSatisfiesFilter() {
       rv = isNull(column);
     } else if(op == IsNotNull) {
       rv = !isNull(column);
+    } else {
+      parquet::Type::type pqType = types[column];
+
+      if(pqType == parquet::Type::BYTE_ARRAY) {
+        rv = currentRowSatisfiesTextFilter(constraints[i]);
+      } else if(pqType == parquet::Type::INT32 ||
+                pqType == parquet::Type::INT64 ||
+                pqType == parquet::Type::INT96 ||
+                pqType == parquet::Type::BOOLEAN) {
+        rv = currentRowSatisfiesIntegerFilter(constraints[i]);
+      } else if(pqType == parquet::Type::FLOAT || pqType == parquet::Type::DOUBLE) {
+        rv = currentRowSatisfiesDoubleFilter(constraints[i]);
+      }
     }
 
     if(!rv)

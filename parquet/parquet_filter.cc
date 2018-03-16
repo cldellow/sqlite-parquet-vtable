@@ -39,10 +39,10 @@ double Constraint::getDouble() {
   return doubleValue;
 }
 
-const std::vector<unsigned char> Constraint::getBytes() {
+const std::vector<unsigned char>& Constraint::getBytes() {
   return blobValue;
 }
 
-std::string Constraint::getString() {
+const std::string& Constraint::getString() {
   return stringValue;
 }

@@ -57,8 +57,8 @@ public:
   ValueType getType();
   int64_t getInt();
   double getDouble();
-  const std::vector<unsigned char> getBytes();
-  std::string getString();
+  const std::vector<unsigned char>& getBytes();
+  const std::string& getString();
 };
 
 #endif
