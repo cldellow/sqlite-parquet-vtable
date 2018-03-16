@@ -18,31 +18,3 @@ Constraint::Constraint(
   if(type == Text)
     stringValue = std::string((char*)&blobValue[0], blobValue.size());
 }
-
-int Constraint::getColumn() {
-  return column;
-}
-
-ConstraintOperator Constraint::getOperator() {
-  return op;
-}
-
-ValueType Constraint::getType() {
-  return type;
-}
-
-int64_t Constraint::getInt() {
-  return intValue;
-}
-
-double Constraint::getDouble() {
-  return doubleValue;
-}
-
-const std::vector<unsigned char>& Constraint::getBytes() {
-  return blobValue;
-}
-
-const std::string& Constraint::getString() {
-  return stringValue;
-}

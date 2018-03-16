@@ -31,16 +31,6 @@ enum ValueType {
 };
 
 class Constraint {
-  int column; // underlying column in the query
-  ConstraintOperator op;
-  ValueType type;
-
-  int64_t intValue;
-  double doubleValue;
-  std::vector<unsigned char> blobValue;
-  // Only set when blobValue is set
-  std::string stringValue;
-
 public:
   // Kind of a messy constructor function, but it's just for internal use, so whatever.
   Constraint(
@@ -52,13 +42,15 @@ public:
     std::vector<unsigned char> blobValue
   );
 
-  int getColumn();
-  ConstraintOperator getOperator();
-  ValueType getType();
-  int64_t getInt();
-  double getDouble();
-  const std::vector<unsigned char>& getBytes();
-  const std::string& getString();
+  int column; // underlying column in the query
+  ConstraintOperator op;
+  ValueType type;
+
+  int64_t intValue;
+  double doubleValue;
+  std::vector<unsigned char> blobValue;
+  // Only set when blobValue is set
+  std::string stringValue;
 };
 
 #endif

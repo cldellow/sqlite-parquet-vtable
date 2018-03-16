@@ -7,8 +7,8 @@ ParquetCursor::ParquetCursor(ParquetTable* table) {
 }
 
 bool ParquetCursor::currentRowGroupSatisfiesRowIdFilter(Constraint& constraint) {
-  int64_t target = constraint.getInt();
-  switch(constraint.getOperator()) {
+  int64_t target = constraint.intValue;
+  switch(constraint.op) {
     case IsNull:
       return false;
     case Is:
@@ -30,7 +30,6 @@ bool ParquetCursor::currentRowGroupSatisfiesRowIdFilter(Constraint& constraint) 
 }
 
 bool ParquetCursor::currentRowGroupSatisfiesTextFilter(Constraint& constraint, std::shared_ptr<parquet::RowGroupStatistics> _stats) {
-  std::vector<unsigned char> target = constraint.getBytes();
   parquet::TypedRowGroupStatistics<parquet::DataType<parquet::Type::BYTE_ARRAY>>* stats =
     (parquet::TypedRowGroupStatistics<parquet::DataType<parquet::Type::BYTE_ARRAY>>*)_stats.get();
 
@@ -38,18 +37,18 @@ bool ParquetCursor::currentRowGroupSatisfiesTextFilter(Constraint& constraint, s
     return true;
   }
 
-  if(constraint.getType() != Text) {
+  if(constraint.type != Text) {
     return true;
   }
 
-  const std::string& str = constraint.getString();
+  const std::string& str = constraint.stringValue;
   const parquet::ByteArray& min = stats->min();
   const parquet::ByteArray& max = stats->max();
   std::string minStr((const char*)min.ptr, min.len);
   std::string maxStr((const char*)max.ptr, max.len);
 //  printf("min=%s [%d], max=%s [%d], target=%s\n", minStr.data(), min.len, maxStr.data(), max.len, str.data());
 
-  switch(constraint.getOperator()) {
+  switch(constraint.op) {
     case Is:
     case Equal:
       return str >= minStr && str <= maxStr;
@@ -75,14 +74,14 @@ bool ParquetCursor::currentRowGroupSatisfiesDoubleFilter(Constraint& constraint,
 }
 
 bool ParquetCursor::currentRowSatisfiesTextFilter(Constraint& constraint) {
-  if(constraint.getType() != Text) {
+  if(constraint.type != Text) {
     return true;
   }
 
-  const std::vector<unsigned char>& blob = constraint.getBytes();
-  parquet::ByteArray* ba = getByteArray(constraint.getColumn());
+  const std::vector<unsigned char>& blob = constraint.blobValue;
+  parquet::ByteArray* ba = getByteArray(constraint.column);
 
-  switch(constraint.getOperator()) {
+  switch(constraint.op) {
     case Is:
     case Equal:
       if(blob.size() != ba->len)
@@ -120,8 +119,8 @@ bool ParquetCursor::currentRowSatisfiesDoubleFilter(Constraint& constraint) {
 // data, which provides substantial performance benefits.
 bool ParquetCursor::currentRowGroupSatisfiesFilter() {
   for(unsigned int i = 0; i < constraints.size(); i++) {
-    int column = constraints[i].getColumn();
-    int op = constraints[i].getOperator();
+    int column = constraints[i].column;
+    int op = constraints[i].op;
     bool rv = true;
 
     if(column == -1) {
@@ -224,9 +223,9 @@ start:
 bool ParquetCursor::currentRowSatisfiesFilter() {
   for(unsigned int i = 0; i < constraints.size(); i++) {
     bool rv = true;
-    int column = constraints[i].getColumn();
+    int column = constraints[i].column;
     ensureColumn(column);
-    int op = constraints[i].getOperator();
+    int op = constraints[i].op;
 
     if(op == IsNull) {
       rv = isNull(column);
