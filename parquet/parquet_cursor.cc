@@ -91,16 +91,32 @@ bool ParquetCursor::currentRowGroupSatisfiesFilter() {
       }
       std::shared_ptr<parquet::RowGroupStatistics> stats = md->statistics();
 
+      // SQLite is much looser with types than you might expect if you
+      // come from a Postgres background. The constraint '30.0' (that is,
+      // a string containing a floating point number) should be treated
+      // as equal to a field containing an integer 30.
+      //
+      // This means that even if the parquet physical type is integer,
+      // the constraint type may be a string, so dispatch to the filter
+      // fn based on the Parquet type.
+
       if(op == IsNull) {
         rv = stats->null_count() > 0;
       } else if(op == IsNotNull) {
         rv = stats->num_values() > 0;
-      } else if(type == Text) {
-        rv = currentRowGroupSatisfiesTextFilter(constraints[i], stats);
-      } else if(type == Integer) {
-        rv = currentRowGroupSatisfiesIntegerFilter(constraints[i], stats);
-      } else if(type == Double) {
-        rv = currentRowGroupSatisfiesDoubleFilter(constraints[i], stats);
+      } else {
+        parquet::Type::type pqType = types[column];
+
+        if(pqType == parquet::Type::BYTE_ARRAY) {
+          rv = currentRowGroupSatisfiesTextFilter(constraints[i], stats);
+        } else if(pqType == parquet::Type::INT32 ||
+                  pqType == parquet::Type::INT64 ||
+                  pqType == parquet::Type::INT96 ||
+                  pqType == parquet::Type::BOOLEAN) {
+          rv = currentRowGroupSatisfiesIntegerFilter(constraints[i], stats);
+        } else if(pqType == parquet::Type::FLOAT || pqType == parquet::Type::DOUBLE) {
+          rv = currentRowGroupSatisfiesDoubleFilter(constraints[i], stats);
+        }
       }
     }
 
