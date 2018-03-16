@@ -16,9 +16,10 @@ and may be good enough for yours, too.
 ## Building
 
 1. Install [`parquet-cpp`](https://github.com/apache/parquet-cpp)
+    1. Master appears to be broken for text row group stats; see https://github.com/cldellow/sqlite-parquet-vtable/issues/5 for which versions to use
 2. Run `./build-sqlite` to fetch and build the SQLite dev bits
 3. Run `./parquet/make` to build the module
-  1. You will need to fixup the paths in this file to point at your local parquet-cpp folder.
+    1. You will need to fixup the paths in this file to point at your local parquet-cpp folder.
 
 ## Use
 
