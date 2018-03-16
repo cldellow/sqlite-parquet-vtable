@@ -33,13 +33,36 @@ sqlite> SELECT * FROM demo;
 
 ## Supported features
 
-### Index
+### Row group filtering
 
-Only full table scans are supported.
+Row group filtering is supported for strings and numerics so long as the SQLite
+type matches the Parquet type.
+
+e.g. if you have a column `foo` that is an INT32, this query will skip row groups whose
+statistics prove that it does not contain relevant rows:
+
+```
+SELECT * FROM tbl WHERE foo = 123;
+```
+
+but this query will devolve to a table scan:
+
+```
+SELECT * FROM tbl WHERE foo = '123';
+```
+
+This is laziness on my part and could be fixed without too much effort.
+
+### Row filtering
+
+For common constraints, the row is checked to see if it satisfies the query's
+constraints before returning control to SQLite's virtual machine. This minimizes
+the number of allocations performed when many rows are filtered out by
+the user's criteria.
 
 ### Types
 
-These types are supported:
+These Parquet types are supported:
 
 * INT96 timestamps (exposed as milliseconds since the epoch)
 * INT8/INT16/INT32/INT64
@@ -49,7 +72,7 @@ These types are supported:
 * DOUBLE
 * Variable- and fixed-length byte arrays
 
-These are not supported:
+These are not currently supported:
 
 * UINT8/UINT16/UINT32/UINT64
 * DECIMAL

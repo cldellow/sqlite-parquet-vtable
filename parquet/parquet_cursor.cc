@@ -160,8 +160,68 @@ bool ParquetCursor::currentRowGroupSatisfiesIntegerFilter(Constraint& constraint
   return true;
 }
 
-bool ParquetCursor::currentRowGroupSatisfiesDoubleFilter(Constraint& constraint, std::shared_ptr<parquet::RowGroupStatistics> stats) {
+bool ParquetCursor::currentRowGroupSatisfiesDoubleFilter(Constraint& constraint, std::shared_ptr<parquet::RowGroupStatistics> _stats) {
+  if(!_stats->HasMinMax()) {
+    return true;
+  }
+
+  if(constraint.type != Double) {
+    return true;
+  }
+
+  int column = constraint.column;
+
+  double min = std::numeric_limits<double>::min();
+  double max = std::numeric_limits<double>::max();
+  parquet::Type::type pqType = types[column];
+
+  if(pqType == parquet::Type::DOUBLE) {
+    parquet::TypedRowGroupStatistics<parquet::DataType<parquet::Type::DOUBLE>>* stats =
+      (parquet::TypedRowGroupStatistics<parquet::DataType<parquet::Type::DOUBLE>>*)_stats.get();
+
+    min = stats->min();
+    max = stats->max();
+  } else if(pqType == parquet::Type::FLOAT) {
+    parquet::TypedRowGroupStatistics<parquet::DataType<parquet::Type::FLOAT>>* stats =
+      (parquet::TypedRowGroupStatistics<parquet::DataType<parquet::Type::FLOAT>>*)_stats.get();
+
+    min = stats->min();
+    max = stats->max();
+  } else {
+    // Should be impossible to get here as we should have forbidden this at
+    // CREATE time -- maybe file changed underneath us?
+    std::ostringstream ss;
+    ss << __FILE__ << ":" << __LINE__ << ": currentRowGroupSatisfiesIntegerFilter called on unsupported type: " <<
+      parquet::TypeToString(pqType);
+    throw std::invalid_argument(ss.str());
+  }
+
+  const double value = constraint.doubleValue;
+//  printf("min=%s [%d], max=%s [%d], target=%s\n", minStr.data(), min.len, maxStr.data(), max.len, str.data());
+
+  switch(constraint.op) {
+    case Is:
+    case Equal:
+      return value >= min && value <= max;
+    case GreaterThanOrEqual:
+      return max >= value;
+    case GreaterThan:
+      return max > value;
+    case LessThan:
+      return min < value;
+    case LessThanOrEqual:
+      return min <= value;
+    case IsNot:
+    case NotEqual:
+      // If min == max == str, we can skip this.
+      return !(min == max && value == min);
+    case Like:
+    default:
+      return true;
+  }
+
   return true;
+
 }
 
 bool ParquetCursor::currentRowSatisfiesTextFilter(Constraint& constraint) {
