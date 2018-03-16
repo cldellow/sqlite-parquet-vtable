@@ -9,7 +9,6 @@ ARROW_LIB = /usr/local/lib/libarrow.so
 BOOST_LIB = /usr/lib/x86_64-linux-gnu/libboost_regex.so
 
 LDFLAGS = -O3 $(PARQUET_LIB) $(THRIFT_LIB) $(ARROW_LIB) $(BOOST_LIB)
-DEPS = hellomake.h
 OBJ = parquet.o parquet_filter.o parquet_table.o parquet_cursor.o
 
 libparquet.so: $(OBJ)

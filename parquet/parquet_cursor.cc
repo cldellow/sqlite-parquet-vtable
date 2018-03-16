@@ -42,9 +42,9 @@ bool ParquetCursor::currentRowGroupSatisfiesTextFilter(Constraint& constraint, s
     return true;
   }
 
-  std::string str = constraint.getString();
-  parquet::ByteArray min = stats->min();
-  parquet::ByteArray max = stats->max();
+  const std::string& str = constraint.getString();
+  const parquet::ByteArray& min = stats->min();
+  const parquet::ByteArray& max = stats->max();
   std::string minStr((const char*)min.ptr, min.len);
   std::string maxStr((const char*)max.ptr, max.len);
 //  printf("min=%s [%d], max=%s [%d], target=%s\n", minStr.data(), min.len, maxStr.data(), max.len, str.data());
@@ -79,7 +79,7 @@ bool ParquetCursor::currentRowSatisfiesTextFilter(Constraint& constraint) {
     return true;
   }
 
-  std::vector<unsigned char> blob = constraint.getBytes();
+  const std::vector<unsigned char>& blob = constraint.getBytes();
   parquet::ByteArray* ba = getByteArray(constraint.getColumn());
 
   switch(constraint.getOperator()) {
@@ -300,7 +300,6 @@ void ParquetCursor::ensureColumn(int col) {
   if(scanners[col].get() == NULL) {
     std::shared_ptr<parquet::ColumnReader> colReader = rowGroup->Column(col);
     scanners[col] = parquet::Scanner::Make(colReader);
-    // TODO: potentially skip rows if rowsLeftInRowGroup != rowGroupMetadata->num_rows()
   }
 
   // Actually fetch a value, stash data in colRows, colNulls, colValues
