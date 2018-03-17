@@ -1,0 +1,2 @@
+SELECT COUNT(*) FROM nulls WHERE binary_9 = X'020202'
+1
