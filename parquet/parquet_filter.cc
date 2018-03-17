@@ -15,6 +15,22 @@ Constraint::Constraint(
   this->doubleValue = doubleValue;
   this->blobValue = blobValue;
 
-  if(type == Text)
+  if(type == Text) {
     stringValue = std::string((char*)&blobValue[0], blobValue.size());
+
+    if(op == Like) {
+      // This permits more rowgroups than is strictly needed
+      // since it assumes an implicit wildcard. But it's
+      // simple to implement, so we'll go with it.
+      likeStringValue = stringValue;
+      size_t idx = likeStringValue.find_first_of("%");
+      if(idx != std::string::npos) {
+        likeStringValue = likeStringValue.substr(0, idx);
+      }
+      idx = likeStringValue.find_first_of("_");
+      if(idx != std::string::npos) {
+        likeStringValue = likeStringValue.substr(0, idx);
+      }
+    }
+  }
 }

@@ -66,22 +66,10 @@ bool ParquetCursor::currentRowGroupSatisfiesTextFilter(Constraint& constraint, s
       return !(minStr == maxStr && str == minStr);
     case Like:
     {
-      std::string truncated = str;
-      size_t idx = truncated.find_first_of("%");
-      if(idx != std::string::npos) {
-        truncated = truncated.substr(0, idx);
-      }
-      idx = truncated.find_first_of("_");
-      if(idx != std::string::npos) {
-        truncated = truncated.substr(0, idx);
-      }
-
-      // This permits more rowgroups than is strictly needed
-      // since it assumes an implicit wildcard. But it's
-      // simple to implement, so we'll go with it.
-      std::string truncatedMin = minStr.substr(0, truncated.size());
-      std::string truncatedMax = maxStr.substr(0, truncated.size());
-      return truncated.empty() || (truncated >= truncatedMin && truncated <= truncatedMax);
+      const std::string& likeStringValue = constraint.likeStringValue;
+      std::string truncatedMin = minStr.substr(0, likeStringValue.size());
+      std::string truncatedMax = maxStr.substr(0, likeStringValue.size());
+      return likeStringValue.empty() || (likeStringValue >= truncatedMin && likeStringValue <= truncatedMax);
     }
     default:
       return true;
@@ -245,33 +233,87 @@ bool ParquetCursor::currentRowSatisfiesTextFilter(Constraint& constraint) {
     return true;
   }
 
-  const std::vector<unsigned char>& blob = constraint.blobValue;
   parquet::ByteArray* ba = getByteArray(constraint.column);
 
   switch(constraint.op) {
     case Is:
     case Equal:
+    {
+      const std::vector<unsigned char>& blob = constraint.blobValue;
+
       if(blob.size() != ba->len)
         return false;
 
       return 0 == memcmp(&blob[0], ba->ptr, ba->len);
+    }
     case IsNot:
     case NotEqual:
+    {
+      const std::vector<unsigned char>& blob = constraint.blobValue;
+
       if(blob.size() != ba->len)
         return true;
 
       return 0 != memcmp(&blob[0], ba->ptr, ba->len);
+    }
     case GreaterThan:
+    {
+      const std::vector<unsigned char>& blob = constraint.blobValue;
+
+      return std::lexicographical_compare(
+          &blob[0],
+          &blob[0] + blob.size(),
+          ba->ptr,
+          ba->ptr + ba->len);
+    }
     case GreaterThanOrEqual:
+    {
+      const std::vector<unsigned char>& blob = constraint.blobValue;
+
+      bool equal = blob.size() == ba->len && 0 == memcmp(&blob[0], ba->ptr, ba->len);
+
+      return equal || std::lexicographical_compare(
+          &blob[0],
+          &blob[0] + blob.size(),
+          ba->ptr,
+          ba->ptr + ba->len);
+    }
     case LessThan:
+    {
+      const std::vector<unsigned char>& blob = constraint.blobValue;
+
+      return std::lexicographical_compare(
+          ba->ptr,
+          ba->ptr + ba->len,
+          &blob[0],
+          &blob[0] + blob.size());
+    }
     case LessThanOrEqual:
+    {
+      const std::vector<unsigned char>& blob = constraint.blobValue;
 
+      bool equal = blob.size() == ba->len && 0 == memcmp(&blob[0], ba->ptr, ba->len);
+
+      return equal || std::lexicographical_compare(
+          ba->ptr,
+          ba->ptr + ba->len,
+          &blob[0],
+          &blob[0] + blob.size());
+    }
     case Like:
+    {
+      const std::string& likeStringValue = constraint.likeStringValue;
+      if(likeStringValue.size() > ba->len)
+        return false;
 
+      size_t len = ba->len;
+      if(likeStringValue.size() < len)
+        len = likeStringValue.size();
+      return 0 == memcmp(&likeStringValue[0], ba->ptr, len);
+    }
     default:
       return true;
   }
-
 }
 
 bool ParquetCursor::currentRowSatisfiesIntegerFilter(Constraint& constraint) {

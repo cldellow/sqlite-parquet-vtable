@@ -51,6 +51,9 @@ public:
   std::vector<unsigned char> blobValue;
   // Only set when blobValue is set
   std::string stringValue;
+
+  // Only set when stringValue is set and op == Like
+  std::string likeStringValue;
 };
 
 #endif
