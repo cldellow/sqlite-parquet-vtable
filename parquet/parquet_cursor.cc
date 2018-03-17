@@ -370,6 +370,34 @@ bool ParquetCursor::currentRowSatisfiesIntegerFilter(Constraint& constraint) {
 }
 
 bool ParquetCursor::currentRowSatisfiesDoubleFilter(Constraint& constraint) {
+  if(constraint.type != Double) {
+    return true;
+  }
+
+  int column = constraint.column;
+  double value = getDouble(column);
+  double constraintValue = constraint.doubleValue;
+
+  switch(constraint.op) {
+    case Is:
+    case Equal:
+      return constraintValue == value;
+    case IsNot:
+    case NotEqual:
+      return constraintValue != value;
+    case GreaterThan:
+      return value > constraintValue;
+    case GreaterThanOrEqual:
+      return value >= constraintValue;
+    case LessThan:
+      return value < constraintValue;
+    case LessThanOrEqual:
+      return value <= constraintValue;
+    case Like:
+    default:
+      return true;
+  }
+
   return true;
 }
 
