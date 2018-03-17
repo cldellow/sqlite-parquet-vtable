@@ -317,6 +317,55 @@ bool ParquetCursor::currentRowSatisfiesTextFilter(Constraint& constraint) {
 }
 
 bool ParquetCursor::currentRowSatisfiesIntegerFilter(Constraint& constraint) {
+  if(constraint.type != Integer) {
+    return true;
+  }
+
+  int column = constraint.column;
+
+  // CONSIDER: should we just store int64s everywhere?
+  int64_t value = 0;
+
+  if(column == -1) {
+    value = rowId;
+  } else {
+    parquet::Type::type pqType = types[column];
+
+    if(pqType == parquet::Type::INT32 || pqType == parquet::Type::BOOLEAN) {
+      value = getInt32(column);
+    } else if(pqType == parquet::Type::INT64 || pqType == parquet::Type::INT96) {
+      value = getInt64(column);
+    } else {
+      // Should be impossible to get here
+      std::ostringstream ss;
+      ss << __FILE__ << ":" << __LINE__ << ": currentRowSatisfiesIntegerFilter called on unsupported type: " <<
+        parquet::TypeToString(pqType);
+      throw std::invalid_argument(ss.str());
+    }
+  }
+
+  int64_t constraintValue = constraint.intValue;
+
+  switch(constraint.op) {
+    case Is:
+    case Equal:
+      return constraintValue == value;
+    case IsNot:
+    case NotEqual:
+      return constraintValue != value;
+    case GreaterThan:
+      return value > constraintValue;
+    case GreaterThanOrEqual:
+      return value >= constraintValue;
+    case LessThan:
+      return value < constraintValue;
+    case LessThanOrEqual:
+      return value <= constraintValue;
+    case Like:
+    default:
+      return true;
+  }
+
   return true;
 }
 
