@@ -65,8 +65,24 @@ bool ParquetCursor::currentRowGroupSatisfiesTextFilter(Constraint& constraint, s
       // If min == max == str, we can skip this.
       return !(minStr == maxStr && str == minStr);
     case Like:
-      // TODO: We could do something here where we filter based on the leading characters
-      //       of the target. For now, do nothing.
+    {
+      std::string truncated = str;
+      size_t idx = truncated.find_first_of("%");
+      if(idx != std::string::npos) {
+        truncated = truncated.substr(0, idx);
+      }
+      idx = truncated.find_first_of("_");
+      if(idx != std::string::npos) {
+        truncated = truncated.substr(0, idx);
+      }
+
+      // This permits more rowgroups than is strictly needed
+      // since it assumes an implicit wildcard. But it's
+      // simple to implement, so we'll go with it.
+      std::string truncatedMin = minStr.substr(0, truncated.size());
+      std::string truncatedMax = maxStr.substr(0, truncated.size());
+      return truncated.empty() || (truncated >= truncatedMin && truncated <= truncatedMax);
+    }
     default:
       return true;
   }
