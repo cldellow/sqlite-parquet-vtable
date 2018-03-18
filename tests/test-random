@@ -80,7 +80,7 @@ def test_table(conn, table):
     for name in column_names:
         column_values[name] = get_column_values(conn, table, name)
 
-    random.seed(0)
+    #random.seed(0)
     all_values = []
     for values in column_values.values():
         all_values = all_values + values

@@ -638,7 +638,7 @@ bool ParquetCursor::currentRowSatisfiesFilter() {
     } else {
       parquet::Type::type pqType = types[column];
 
-      if(pqType == parquet::Type::BYTE_ARRAY) {
+      if(pqType == parquet::Type::BYTE_ARRAY && logicalTypes[column] == parquet::LogicalType::UTF8) {
         rv = currentRowSatisfiesTextFilter(constraints[i]);
       } else if(pqType == parquet::Type::INT32 ||
                 pqType == parquet::Type::INT64 ||
