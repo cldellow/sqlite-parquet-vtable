@@ -6,8 +6,8 @@ from glob import glob
 import re
 import itertools
 
-NULL_TOKENS = ['nulls1', 'nulls2', 'nulls3']
-NO_NULL_TOKENS = ['no_nulls1', 'no_nulls2', 'no_nulls3']
+NULL_TOKENS = ['nulls', 'nulls1', 'nulls2', 'nulls3']
+NO_NULL_TOKENS = ['no_nulls', 'no_nulls1', 'no_nulls2', 'no_nulls3']
 
 TOKEN_SET = NULL_TOKENS + NO_NULL_TOKENS
 

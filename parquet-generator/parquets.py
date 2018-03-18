@@ -50,6 +50,13 @@ def get_99_rows_types():
 #        pa.float32()
     ]
 
+def name_of(type, i):
+    name = '{}_{}'.format(type, i)
+    name = name.replace('timestamp[ns]', 'ts')
+    name = name.replace('fixed_size_binary[1]', 'binary')
+    return name
+
+
 def write_parquet(file_name, rows, types, row_group_size):
     '''Create two parquets with columns we support.'''
     # pivot to be column major, create arrow structures
@@ -59,13 +66,7 @@ def write_parquet(file_name, rows, types, row_group_size):
         col.append([row[i] for row in rows])
         fields.append(pa.chunked_array(col, type=types[i]))
 
-    def name_of(i):
-        name = '{}_{}'.format(types[i], i)
-        name = name.replace('timestamp[ns]', 'ts')
-        name = name.replace('fixed_size_binary[1]', 'binary')
-        return name
-
-    cols = [pa.Column.from_array(name_of(i), fields[i]) for i in range(len(fields))]
+    cols = [pa.Column.from_array(name_of(types[i], i), fields[i]) for i in range(len(fields))]
     table = pa.Table.from_arrays(cols)
     print('Writing {}'.format(file_name))
     pq.write_table(table,
@@ -128,6 +129,77 @@ def write_csv(file_name, rows):
 
             f.write(line + '\n')
 
+def type_of(type):
+    if type == pa.bool_():
+        return 'BOOLEAN'
+    elif type == pa.int8():
+        return 'TINYINT'
+    elif type == pa.int16():
+        return 'SMALLINT'
+    elif type == pa.int32():
+        return 'INT'
+    elif type == pa.int64() or type == pa.timestamp('ns'):
+        return 'BIGINT'
+    elif type == pa.float64():
+        return 'DOUBLE'
+    elif type == pa.string():
+        return 'TEXT'
+    elif type == pa.binary():
+        return 'BLOB'
+    elif type == pa.binary(1):
+        return 'BLOB'
+    else:
+        raise ValueError('unknown type: {}'.format(type))
+
+def write_sql(file_name, rows, types):
+    table_name = file_name.replace('.sql', '').replace('-', '_')
+    print('Writing {} [{}]'.format(file_name, table_name))
+
+    with open(file_name, 'w') as f:
+        f.write('BEGIN;')
+        f.write('DROP TABLE IF EXISTS {};\n'.format(table_name))
+        f.write('CREATE TABLE {} ('.format(table_name))
+        for i, col in enumerate(types):
+            if i > 0:
+                f.write(', ');
+
+            col_name = name_of(col, i)
+            f.write('{} {}'.format(name_of(col, i), type_of(col)))
+        f.write(');\n')
+
+        for row in rows:
+            f.write('INSERT INTO {} VALUES ('.format(table_name))
+            line = ''
+            for i, col in enumerate(row):
+                if i > 0:
+                    line += ', '
+
+                if col == True:
+                    line += '1'
+                elif col == False:
+                    line += '0'
+                elif col is None:
+                    line += 'NULL'
+                elif isinstance(col, bytes):
+                    entry = r"X'"
+                    for b in col:
+                        entry += '%0.2X' % b
+
+                    entry += "'"
+                    line += entry
+                elif isinstance(col, datetime):
+                    line += str(1000 * int(col.timestamp()))
+                elif isinstance(col, str):
+                    line += "'{}'".format(col)
+                else:
+                    line += str(col)
+
+            f.write(line)
+            f.write(');\n')
+        f.write('COMMIT;\n')
+
+
+
 def main():
     '''Entrypoint.'''
     rows = make_99_rows()
@@ -137,6 +209,7 @@ def main():
     write_csv('no-nulls.csv', rows)
     write_parquet('99-rows-10.parquet', rows, types, row_group_size=10)
     write_parquet('99-rows-99.parquet', rows, types, row_group_size=1)
+    write_sql('no-nulls.sql', rows, types)
 
     for i in range(len(rows)):
         for j in range(len(rows[i])):
@@ -146,6 +219,7 @@ def main():
     write_parquet('99-rows-nulls-10.parquet', rows, types,row_group_size=10)
     write_parquet('99-rows-nulls-1.parquet', rows, types,row_group_size=1)
     write_csv('nulls.csv', rows)
+    write_sql('nulls.sql', rows, types)
 
     write_unsupported_parquets()
 

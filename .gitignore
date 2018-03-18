@@ -46,3 +46,5 @@
 /testcase-cmds.txt
 /testcases.txt
 tests/queries
+/testcase-bootstrap.sql
+/test.db
