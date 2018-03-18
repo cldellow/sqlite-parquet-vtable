@@ -1,5 +1,5 @@
 select rowid % 10, count(*) from nulls1 group by 1 order by 1
-0|10
+0|9
 1|10
 2|10
 3|10
@@ -8,4 +8,4 @@ select rowid % 10, count(*) from nulls1 group by 1 order by 1
 6|10
 7|10
 8|10
-9|9
+9|10

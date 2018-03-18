@@ -682,7 +682,7 @@ int ParquetCursor::getRowId() {
 }
 
 bool ParquetCursor::eof() {
-  return rowId >= numRows;
+  return rowId > numRows;
 }
 
 void ParquetCursor::ensureColumn(int col) {
@@ -937,7 +937,7 @@ void ParquetCursor::close() {
 void ParquetCursor::reset(std::vector<Constraint> constraints) {
   close();
   this->constraints = constraints;
-  rowId = -1;
+  rowId = 0;
   // TODO: consider having a long lived handle in ParquetTable that can be borrowed
   // without incurring the cost of opening the file from scratch twice
   reader = parquet::ParquetFileReader::OpenFile(
@@ -948,7 +948,7 @@ void ParquetCursor::reset(std::vector<Constraint> constraints) {
 
   rowGroupId = -1;
   rowGroupSize = 0;
-  rowGroupStartRowId = -1;
+  rowGroupStartRowId = 0;
   // TODO: handle the case where rowgroups have disjoint schemas?
   // TODO: or at least, fail fast if detected
   rowsLeftInRowGroup = 0;

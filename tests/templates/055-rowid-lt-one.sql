@@ -1,2 +1,2 @@
-select count(*) from no_nulls1 where rowid < 1
+select count(*) from no_nulls1 where rowid < 2
 1

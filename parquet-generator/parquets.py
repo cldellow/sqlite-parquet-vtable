@@ -102,7 +102,7 @@ def write_csv(file_name, rows):
     print('Writing {}'.format(file_name))
     with open(file_name, 'w') as f:
         for rowid, row in enumerate(rows):
-            line = str(rowid)
+            line = str(rowid + 1)
             for col in row:
                 line += '\t'
 
