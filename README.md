@@ -21,12 +21,21 @@ and may be good enough for yours, too.
 3. Run `./parquet/make` to build the module
     1. You will need to fixup the paths in this file to point at your local parquet-cpp folder.
 
+## Tests
+
+Run:
+
+```
+tests/create-queries-from-templates
+tests/test-all
+```
+
 ## Use
 
 ```
 $ sqlite/sqlite3
 sqlite> .load parquet/libparquet
-sqlite> CREATE VIRTUAL TABLE demo USING parquet('parquet-generator/100-rows-1.parquet');
+sqlite> CREATE VIRTUAL TABLE demo USING parquet('parquet-generator/99-rows-1.parquet');
 sqlite> SELECT * FROM demo;
 ...if all goes well, you'll see data here!...
 ```
