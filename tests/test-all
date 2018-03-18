@@ -8,3 +8,4 @@ set -x
 "$here"/test-unsupported
 "$here"/test-supported
 "$here"/test-queries
+"$here"/test-random
