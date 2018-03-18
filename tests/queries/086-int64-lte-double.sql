@@ -1,3 +1,3 @@
-select int64_4 from nulls where int64_4 <= -45000000000.0
+select int64_4 from nulls1 where int64_4 <= -45000000000.0
 -45000000000
 -47000000000

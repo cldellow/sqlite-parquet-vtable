@@ -136,12 +136,15 @@ def main():
     write_parquet('99-rows-1.parquet', rows, types, row_group_size=99)
     write_csv('no-nulls.csv', rows)
     write_parquet('99-rows-10.parquet', rows, types, row_group_size=10)
+    write_parquet('99-rows-99.parquet', rows, types, row_group_size=1)
 
     for i in range(len(rows)):
         for j in range(len(rows[i])):
             if (i >= 10 and i <= 19) or (i >= 20 and (i + j) % 2 == 0):
                 rows[i][j] = None
-    write_parquet('99-rows-nulls.parquet', rows, types,row_group_size=10)
+    write_parquet('99-rows-nulls-99.parquet', rows, types,row_group_size=99)
+    write_parquet('99-rows-nulls-10.parquet', rows, types,row_group_size=10)
+    write_parquet('99-rows-nulls-1.parquet', rows, types,row_group_size=1)
     write_csv('nulls.csv', rows)
 
     write_unsupported_parquets()

@@ -1,2 +1,2 @@
-select count(*) from nulls where bool_0 < 0
+select count(*) from nulls1 where bool_0 < 0
 0

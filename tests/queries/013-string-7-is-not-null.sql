@@ -1,4 +1,4 @@
-select rowid, bool_0, quote(binary_10) from nulls where string_7 is not null
+select rowid, bool_0, quote(binary_10) from nulls1 where string_7 is not null
 0|1|X'00'
 1|0|X'01'
 2|1|X'02'

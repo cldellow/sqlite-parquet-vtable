@@ -1,2 +1,2 @@
-SELECT COUNT(*) FROM nulls WHERE binary_9 <> X'62626262'
+SELECT COUNT(*) FROM nulls1 WHERE binary_9 <> X'62626262'
 49

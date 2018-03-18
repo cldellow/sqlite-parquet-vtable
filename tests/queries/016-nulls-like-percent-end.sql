@@ -1,4 +1,4 @@
-select string_7, string_8 from nulls where string_8 like '0%'
+select string_7, string_8 from nulls1 where string_8 like '0%'
 0|000
 1|001
 2|002

@@ -1,4 +1,4 @@
-select rowid % 10, count(*) from nulls group by 1 order by 1
+select rowid % 10, count(*) from nulls1 group by 1 order by 1
 0|10
 1|10
 2|10
