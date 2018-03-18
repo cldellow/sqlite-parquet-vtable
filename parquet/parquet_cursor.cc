@@ -7,6 +7,9 @@ ParquetCursor::ParquetCursor(ParquetTable* table) {
 }
 
 bool ParquetCursor::currentRowGroupSatisfiesRowIdFilter(Constraint& constraint) {
+  if(constraint.type != Integer)
+    return true;
+
   int64_t target = constraint.intValue;
   switch(constraint.op) {
     case IsNull:
