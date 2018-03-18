@@ -465,9 +465,6 @@ static int parquetBestIndex(
         pIdxInfo->aConstraintUsage[i].argvIndex = j;
       }
     }
-
-    // TODO: consider setting this when querying by rowid? Unclear if that's implied.
-    // pIdxInfo->idxFlags = SQLITE_INDEX_SCAN_UNIQUE;
   }
   printf("idx %d has cost %f\n", pIdxInfo->idxNum, pIdxInfo->estimatedCost);
 
@@ -480,7 +477,6 @@ static int parquetBestIndex(
   pIdxInfo->idxStr = (char*)dupe;
   pIdxInfo->needToFreeIdxStr = 1;
 
-  // TODO: populate argvIndex.
   memset(dupe, 0, dupeSize);
   memcpy(dupe, pIdxInfo, sizeof(sqlite3_index_info));
 

@@ -32,6 +32,114 @@ bool ParquetCursor::currentRowGroupSatisfiesRowIdFilter(Constraint& constraint) 
   }
 }
 
+bool ParquetCursor::currentRowGroupSatisfiesBlobFilter(Constraint& constraint, std::shared_ptr<parquet::RowGroupStatistics> _stats) {
+  if(!_stats->HasMinMax()) {
+    return true;
+  }
+
+  if(constraint.type != Blob) {
+    return true;
+  }
+
+  const unsigned char* minPtr = NULL;
+  const unsigned char* maxPtr = NULL;
+  size_t minLen = 0;
+  size_t maxLen = 0;
+
+  parquet::Type::type pqType = types[constraint.column];
+
+  if(pqType == parquet::Type::BYTE_ARRAY) {
+    parquet::TypedRowGroupStatistics<parquet::DataType<parquet::Type::BYTE_ARRAY>>* stats =
+      (parquet::TypedRowGroupStatistics<parquet::DataType<parquet::Type::BYTE_ARRAY>>*)_stats.get();
+
+    minPtr = stats->min().ptr;
+    minLen = stats->min().len;
+    maxPtr = stats->max().ptr;
+    maxLen = stats->max().len;
+  } else if(pqType == parquet::Type::FIXED_LEN_BYTE_ARRAY) {
+    // It seems like parquet-cpp doesn't actually produce stats for FLBA yet, so
+    // rather than have untested code here, we'll just short circuit.
+    //
+    // Once I can get my hands on such a file, it should be easy to add support.
+    return true;
+  } else {
+    // Should be impossible to get here
+    std::ostringstream ss;
+    ss << __FILE__ << ":" << __LINE__ << ": currentRowGroupSatisfiesBlobFilter called on unsupported type: " <<
+      parquet::TypeToString(pqType);
+    throw std::invalid_argument(ss.str());
+  }
+
+  printf("\n\nBLOB\n\n");
+
+  const std::vector<unsigned char>& blob = constraint.blobValue;
+
+  switch(constraint.op) {
+    case Is:
+    case Equal:
+    {
+      bool minEqual = blob.size() == minLen && memcmp(&blob[0], minPtr, minLen) == 0;
+      bool maxEqual = blob.size() == maxLen && memcmp(&blob[0], maxPtr, maxLen) == 0;
+
+      bool blobGteMinBlob = std::lexicographical_compare(
+          minPtr,
+          minPtr + minLen,
+          &blob[0],
+          &blob[0] + blob.size());
+
+      bool blobLtMaxBlob = std::lexicographical_compare(
+          &blob[0],
+          &blob[0] + blob.size(),
+          maxPtr,
+          maxPtr + maxLen);
+
+
+      return (minEqual || blobGteMinBlob) && (maxEqual || blobLtMaxBlob);
+    }
+    case GreaterThanOrEqual:
+    {
+      bool maxEqual = blob.size() == maxLen && memcmp(&blob[0], maxPtr, maxLen) == 0;
+
+      return maxEqual || std::lexicographical_compare(
+          &blob[0],
+          &blob[0] + blob.size(),
+          maxPtr,
+          maxPtr + maxLen);
+    }
+    case GreaterThan:
+      return std::lexicographical_compare(
+          &blob[0],
+          &blob[0] + blob.size(),
+          maxPtr,
+          maxPtr + maxLen);
+    case LessThan:
+      return std::lexicographical_compare(
+          minPtr,
+          minPtr + minLen,
+          &blob[0],
+          &blob[0] + blob.size());
+    case LessThanOrEqual:
+    {
+      bool minEqual = blob.size() == minLen && memcmp(&blob[0], minPtr, minLen) == 0;
+      return minEqual || std::lexicographical_compare(
+          minPtr,
+          minPtr + minLen,
+          &blob[0],
+          &blob[0] + blob.size());
+    }
+    case IsNot:
+    case NotEqual:
+    {
+      // If min == max == blob, we can skip this.
+      bool blobMaxEqual = blob.size() == maxLen && memcmp(&blob[0], maxPtr, maxLen) == 0;
+      bool minMaxEqual = minLen == maxLen && memcmp(minPtr, maxPtr, minLen) == 0;
+      return !(blobMaxEqual && minMaxEqual);
+    }
+    default:
+      return true;
+  }
+}
+
 bool ParquetCursor::currentRowGroupSatisfiesTextFilter(Constraint& constraint, std::shared_ptr<parquet::RowGroupStatistics> _stats) {
   parquet::TypedRowGroupStatistics<parquet::DataType<parquet::Type::BYTE_ARRAY>>* stats =
     (parquet::TypedRowGroupStatistics<parquet::DataType<parquet::Type::BYTE_ARRAY>>*)_stats.get();
@@ -442,8 +550,10 @@ bool ParquetCursor::currentRowGroupSatisfiesFilter() {
       } else {
         parquet::Type::type pqType = types[column];
 
-        if(pqType == parquet::Type::BYTE_ARRAY) {
+        if(pqType == parquet::Type::BYTE_ARRAY && logicalTypes[column] == parquet::LogicalType::UTF8) {
           rv = currentRowGroupSatisfiesTextFilter(constraints[i], stats);
+        } else if(pqType == parquet::Type::BYTE_ARRAY) {
+          rv = currentRowGroupSatisfiesBlobFilter(constraints[i], stats);
         } else if(pqType == parquet::Type::INT32 ||
                   pqType == parquet::Type::INT64 ||
                   pqType == parquet::Type::INT96 ||

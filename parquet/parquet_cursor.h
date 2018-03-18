@@ -37,6 +37,7 @@ class ParquetCursor {
   bool currentRowGroupSatisfiesFilter();
   bool currentRowGroupSatisfiesRowIdFilter(Constraint& constraint);
   bool currentRowGroupSatisfiesTextFilter(Constraint& constraint, std::shared_ptr<parquet::RowGroupStatistics> stats);
+  bool currentRowGroupSatisfiesBlobFilter(Constraint& constraint, std::shared_ptr<parquet::RowGroupStatistics> stats);
   bool currentRowGroupSatisfiesIntegerFilter(Constraint& constraint, std::shared_ptr<parquet::RowGroupStatistics> stats);
   bool currentRowGroupSatisfiesDoubleFilter(Constraint& constraint, std::shared_ptr<parquet::RowGroupStatistics> stats);
 
