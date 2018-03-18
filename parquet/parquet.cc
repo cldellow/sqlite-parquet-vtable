@@ -80,27 +80,26 @@ static int parquetConnect(
   // Remove the delimiting single quotes
   std::string fname = argv[3];
   fname = fname.substr(1, fname.length() - 2);
-  std::unique_ptr<ParquetTable> table(new ParquetTable(fname));
-
   std::unique_ptr<sqlite3_vtab_parquet, void(*)(void*)> vtab(
       (sqlite3_vtab_parquet*)sqlite3_malloc(sizeof(sqlite3_vtab_parquet)),
       sqlite3_free);
   memset(vtab.get(), 0, sizeof(*vtab.get()));
 
   try {
+    std::unique_ptr<ParquetTable> table(new ParquetTable(fname));
+
     std::string create = table->CreateStatement();
     int rc = sqlite3_declare_vtab(db, create.data());
     if(rc)
       return rc;
 
+    vtab->table = table.release();
+    *ppVtab = (sqlite3_vtab*)vtab.release();
+    return SQLITE_OK;
   } catch (const std::exception& e) {
     *pzErr = sqlite3_mprintf(e.what());
     return SQLITE_ERROR;
   }
-
-  vtab->table = table.release();
-  *ppVtab = (sqlite3_vtab*)vtab.release();
-  return SQLITE_OK;
 }
 
 /*
