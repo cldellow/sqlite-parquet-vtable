@@ -28,6 +28,10 @@ main() {
   root=$(readlink -f "$root")
   cd "$root"
 
+  if [ ! -d "$root"/tests/queries ]; then
+    "$root"/tests/create-queries-from-templates
+  fi
+
   find_cmd=(find tests/queries -type f -name '*.sql')
   debug=0
   if [ -n "${1:-""}" ]; then
