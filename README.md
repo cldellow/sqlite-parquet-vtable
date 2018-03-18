@@ -40,6 +40,20 @@ sqlite> SELECT * FROM demo;
 ...if all goes well, you'll see data here!...
 ```
 
+Note: if you get an error like:
+
+```
+sqlite> .load parquet/libparquet
+Error: parquet/libparquet.so: wrong ELF class: ELFCLASS64
+```
+
+You have the 32-bit SQLite installed. To fix this, do:
+
+```
+sudo apt-get remove --purge sqlite3
+sudo apt-get install sqlite3:amd64
+```
+
 ## Supported features
 
 ### Row group filtering
