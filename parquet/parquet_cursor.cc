@@ -70,8 +70,6 @@ bool ParquetCursor::currentRowGroupSatisfiesBlobFilter(Constraint& constraint, s
     throw std::invalid_argument(ss.str());
   }
 
-  printf("\n\nBLOB\n\n");
-
   const std::vector<unsigned char>& blob = constraint.blobValue;
 
   switch(constraint.op) {

@@ -383,9 +383,12 @@ static int parquetFilter(
   sqlite3_value **argv
 ){
   ParquetCursor* cursor = ((sqlite3_vtab_cursor_parquet*)cur)->cursor;
-  printf("xFilter: idxNum=%d, idxStr=%lu, argc=%d\n", idxNum, (long unsigned int)idxStr, argc);
   sqlite3_index_info* indexInfo = (sqlite3_index_info*)idxStr;
+
+#ifdef DEBUG
+  printf("xFilter: idxNum=%d, idxStr=%lu, argc=%d\n", idxNum, (long unsigned int)idxStr, argc);
   debugConstraints(indexInfo, cursor->getTable(), argc, argv);
+#endif
   std::vector<Constraint> constraints;
   int j = 0;
   for(int i = 0; i < indexInfo->nConstraint; i++) {
@@ -447,10 +450,12 @@ static int parquetBestIndex(
   sqlite3_vtab *tab,
   sqlite3_index_info *pIdxInfo
 ){
-  ParquetTable* table = ((sqlite3_vtab_parquet*)tab)->table;
 
+#ifdef DEBUG
+  ParquetTable* table = ((sqlite3_vtab_parquet*)tab)->table;
   printf("xBestIndex: nConstraint=%d, nOrderBy=%d\n", pIdxInfo->nConstraint, pIdxInfo->nOrderBy);
   debugConstraints(pIdxInfo, table, 0, NULL);
+#endif
 
   if(pIdxInfo->nConstraint == 0) {
     pIdxInfo->estimatedCost = 1000000000000;
@@ -466,7 +471,6 @@ static int parquetBestIndex(
       }
     }
   }
-  printf("idx %d has cost %f\n", pIdxInfo->idxNum, pIdxInfo->estimatedCost);
 
   size_t dupeSize = sizeof(sqlite3_index_info) +
     //pIdxInfo->nConstraint * sizeof(sqlite3_index_constraint) +
