@@ -49,6 +49,14 @@ def generate_statement(conn, table, column_values, all_values):
         value = values[random.randint(0, len(values) - 1)]
         query += field + ' ' + op + ' ' + str(value)
 
+    if random.randint(0, 3) == 0:
+        how_many = random.randint(0, 15)
+        query += ' LIMIT {}'.format(how_many)
+
+        if random.randint(0, 3) == 0:
+            how_many = random.randint(0, 30)
+            query += ' OFFSET {}'.format(how_many)
+
     return query
 
 def test_statement(conn, table, column_values, all_values):
