@@ -2,17 +2,6 @@
 
 A SQLite [virtual table](https://sqlite.org/vtab.html) extension to expose Parquet files as SQL tables.
 
-## Caveats
-
-I'm not an experienced C/C++ programmer. This library is definitely not bombproof. It's good enough for my use case,
-and may be good enough for yours, too.
-
-* I don't use `sqlite3_malloc` and `sqlite3_free` for C++ objects
-  * Maybe this doesn't matter, since portability isn't a goal
-* The C -> C++ interop definitely leaks some C++ exceptions
-  * Obvious cases like file not found and unsupported Parquet types are OK
-  * Low memory conditions aren't handled gracefully.
-
 ## Building
 
 1. Install [`parquet-cpp`](https://github.com/apache/parquet-cpp)
