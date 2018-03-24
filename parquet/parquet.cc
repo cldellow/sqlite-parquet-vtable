@@ -72,32 +72,38 @@ static int parquetConnect(
   sqlite3_vtab **ppVtab,
   char **pzErr
 ){
-  if(argc != 4 || strlen(argv[3]) < 2) {
-    *pzErr = sqlite3_mprintf("must provide exactly one argument, the path to a parquet file");
-    return SQLITE_ERROR;
-  }
-
-  // Remove the delimiting single quotes
-  std::string fname = argv[3];
-  fname = fname.substr(1, fname.length() - 2);
-  std::unique_ptr<sqlite3_vtab_parquet, void(*)(void*)> vtab(
-      (sqlite3_vtab_parquet*)sqlite3_malloc(sizeof(sqlite3_vtab_parquet)),
-      sqlite3_free);
-  memset(vtab.get(), 0, sizeof(*vtab.get()));
-
   try {
-    std::unique_ptr<ParquetTable> table(new ParquetTable(fname));
+    if(argc != 4 || strlen(argv[3]) < 2) {
+      *pzErr = sqlite3_mprintf("must provide exactly one argument, the path to a parquet file");
+      return SQLITE_ERROR;
+    }
 
-    std::string create = table->CreateStatement();
-    int rc = sqlite3_declare_vtab(db, create.data());
-    if(rc)
-      return rc;
+    // Remove the delimiting single quotes
+    std::string fname = argv[3];
+    fname = fname.substr(1, fname.length() - 2);
+    std::unique_ptr<sqlite3_vtab_parquet, void(*)(void*)> vtab(
+        (sqlite3_vtab_parquet*)sqlite3_malloc(sizeof(sqlite3_vtab_parquet)),
+        sqlite3_free);
+    memset(vtab.get(), 0, sizeof(*vtab.get()));
 
-    vtab->table = table.release();
-    *ppVtab = (sqlite3_vtab*)vtab.release();
-    return SQLITE_OK;
-  } catch (const std::exception& e) {
-    *pzErr = sqlite3_mprintf(e.what());
+    try {
+      std::unique_ptr<ParquetTable> table(new ParquetTable(fname));
+
+      std::string create = table->CreateStatement();
+      int rc = sqlite3_declare_vtab(db, create.data());
+      if(rc)
+        return rc;
+
+      vtab->table = table.release();
+      *ppVtab = (sqlite3_vtab*)vtab.release();
+      return SQLITE_OK;
+    } catch (const std::exception& e) {
+      *pzErr = sqlite3_mprintf(e.what());
+      return SQLITE_ERROR;
+    }
+  } catch(std::bad_alloc& ba) {
+    return SQLITE_NOMEM;
+  } catch(std::exception& e) {
     return SQLITE_ERROR;
   }
 }
@@ -131,16 +137,22 @@ static int parquetClose(sqlite3_vtab_cursor *cur){
 ** Constructor for a new sqlite3_vtab_parquet cursor object.
 */
 static int parquetOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor){
-  std::unique_ptr<sqlite3_vtab_cursor_parquet, void(*)(void*)> cursor(
-      (sqlite3_vtab_cursor_parquet*)sqlite3_malloc(sizeof(sqlite3_vtab_cursor_parquet)),
-      sqlite3_free);
-  memset(cursor.get(), 0, sizeof(*cursor.get()));
+  try {
+    std::unique_ptr<sqlite3_vtab_cursor_parquet, void(*)(void*)> cursor(
+        (sqlite3_vtab_cursor_parquet*)sqlite3_malloc(sizeof(sqlite3_vtab_cursor_parquet)),
+        sqlite3_free);
+    memset(cursor.get(), 0, sizeof(*cursor.get()));
 
-  sqlite3_vtab_parquet* pParquet = (sqlite3_vtab_parquet*)p;
-  cursor->cursor = new ParquetCursor(pParquet->table);
+    sqlite3_vtab_parquet* pParquet = (sqlite3_vtab_parquet*)p;
+    cursor->cursor = new ParquetCursor(pParquet->table);
 
-  *ppCursor = (sqlite3_vtab_cursor*)cursor.release();
-  return SQLITE_OK;
+    *ppCursor = (sqlite3_vtab_cursor*)cursor.release();
+    return SQLITE_OK;
+  } catch(std::bad_alloc& ba) {
+    return SQLITE_NOMEM;
+  } catch(std::exception& e) {
+    return SQLITE_ERROR;
+  }
 }
 
 const char* opName(int op) {
@@ -183,9 +195,15 @@ const char* opName(int op) {
 ** Set the EOF marker if we reach the end of input.
 */
 static int parquetNext(sqlite3_vtab_cursor *cur){
-  ParquetCursor* cursor = ((sqlite3_vtab_cursor_parquet*)cur)->cursor;
-  cursor->next();
-  return SQLITE_OK;
+  try {
+    ParquetCursor* cursor = ((sqlite3_vtab_cursor_parquet*)cur)->cursor;
+    cursor->next();
+    return SQLITE_OK;
+  } catch(std::bad_alloc& ba) {
+    return SQLITE_NOMEM;
+  } catch(std::exception& e) {
+    return SQLITE_ERROR;
+  }
 }
 
 /*
@@ -197,64 +215,70 @@ static int parquetColumn(
   sqlite3_context *ctx,       /* First argument to sqlite3_result_...() */
   int col                       /* Which column to return */
 ){
-  ParquetCursor *cursor = ((sqlite3_vtab_cursor_parquet*)cur)->cursor;
-  cursor->ensureColumn(col);
+  try {
+    ParquetCursor *cursor = ((sqlite3_vtab_cursor_parquet*)cur)->cursor;
+    cursor->ensureColumn(col);
 
-  if(cursor->isNull(col)) {
-    sqlite3_result_null(ctx);
-  } else {
-    switch(cursor->getPhysicalType(col)) {
-      case parquet::Type::BOOLEAN:
-      case parquet::Type::INT32:
-      {
-        int rv = cursor->getInt32(col);
-        sqlite3_result_int(ctx, rv);
-        break;
-      }
-      case parquet::Type::FLOAT:
-      case parquet::Type::DOUBLE:
-      {
-        double rv = cursor->getDouble(col);
-        sqlite3_result_double(ctx, rv);
-        break;
-      }
-      case parquet::Type::BYTE_ARRAY:
-      {
-        parquet::ByteArray* rv = cursor->getByteArray(col);
-        if(cursor->getLogicalType(col) == parquet::LogicalType::UTF8) {
-          sqlite3_result_text(ctx, (const char*)rv->ptr, rv->len, SQLITE_TRANSIENT);
-        } else {
-          sqlite3_result_blob(ctx, (void*)rv->ptr, rv->len, SQLITE_TRANSIENT);
+    if(cursor->isNull(col)) {
+      sqlite3_result_null(ctx);
+    } else {
+      switch(cursor->getPhysicalType(col)) {
+        case parquet::Type::BOOLEAN:
+        case parquet::Type::INT32:
+        {
+          int rv = cursor->getInt32(col);
+          sqlite3_result_int(ctx, rv);
+          break;
         }
-        break;
-      }
-      case parquet::Type::INT96:
-        // This type exists to store timestamps in nanoseconds due to legacy
-        // reasons. We just interpret it as a timestamp in milliseconds.
-      case parquet::Type::INT64:
-      {
-        long rv = cursor->getInt64(col);
-        sqlite3_result_int64(ctx, rv);
-        break;
-      }
-      case parquet::Type::FIXED_LEN_BYTE_ARRAY:
-      {
-        parquet::ByteArray* rv = cursor->getByteArray(col);
-        sqlite3_result_blob(ctx, (void*)rv->ptr, rv->len, SQLITE_TRANSIENT);
-        break;
-      }
-      default:
-        // Should be impossible to get here as we should have forbidden this at
-        // CREATE time -- maybe file changed underneath us?
-        std::ostringstream ss;
-        ss << __FILE__ << ":" << __LINE__ << ": column " << col << " has unsupported type: " <<
-          parquet::TypeToString(cursor->getPhysicalType(col));
+        case parquet::Type::FLOAT:
+        case parquet::Type::DOUBLE:
+        {
+          double rv = cursor->getDouble(col);
+          sqlite3_result_double(ctx, rv);
+          break;
+        }
+        case parquet::Type::BYTE_ARRAY:
+        {
+          parquet::ByteArray* rv = cursor->getByteArray(col);
+          if(cursor->getLogicalType(col) == parquet::LogicalType::UTF8) {
+            sqlite3_result_text(ctx, (const char*)rv->ptr, rv->len, SQLITE_TRANSIENT);
+          } else {
+            sqlite3_result_blob(ctx, (void*)rv->ptr, rv->len, SQLITE_TRANSIENT);
+          }
+          break;
+        }
+        case parquet::Type::INT96:
+          // This type exists to store timestamps in nanoseconds due to legacy
+          // reasons. We just interpret it as a timestamp in milliseconds.
+        case parquet::Type::INT64:
+        {
+          long rv = cursor->getInt64(col);
+          sqlite3_result_int64(ctx, rv);
+          break;
+        }
+        case parquet::Type::FIXED_LEN_BYTE_ARRAY:
+        {
+          parquet::ByteArray* rv = cursor->getByteArray(col);
+          sqlite3_result_blob(ctx, (void*)rv->ptr, rv->len, SQLITE_TRANSIENT);
+          break;
+        }
+        default:
+          // Should be impossible to get here as we should have forbidden this at
+          // CREATE time -- maybe file changed underneath us?
+          std::ostringstream ss;
+          ss << __FILE__ << ":" << __LINE__ << ": column " << col << " has unsupported type: " <<
+            parquet::TypeToString(cursor->getPhysicalType(col));
 
-        throw std::invalid_argument(ss.str());
-        break;
+          throw std::invalid_argument(ss.str());
+          break;
+      }
     }
+    return SQLITE_OK;
+  } catch(std::bad_alloc& ba) {
+    return SQLITE_NOMEM;
+  } catch(std::exception& e) {
+    return SQLITE_ERROR;
   }
-  return SQLITE_OK;
 }
 
 /*
@@ -382,62 +406,68 @@ static int parquetFilter(
   int argc,
   sqlite3_value **argv
 ){
-  ParquetCursor* cursor = ((sqlite3_vtab_cursor_parquet*)cur)->cursor;
-  sqlite3_index_info* indexInfo = (sqlite3_index_info*)idxStr;
+  try {
+    ParquetCursor* cursor = ((sqlite3_vtab_cursor_parquet*)cur)->cursor;
+    sqlite3_index_info* indexInfo = (sqlite3_index_info*)idxStr;
 
 #ifdef DEBUG
-  printf("xFilter: idxNum=%d, idxStr=%lu, argc=%d\n", idxNum, (long unsigned int)idxStr, argc);
-  debugConstraints(indexInfo, cursor->getTable(), argc, argv);
+    printf("xFilter: idxNum=%d, idxStr=%lu, argc=%d\n", idxNum, (long unsigned int)idxStr, argc);
+    debugConstraints(indexInfo, cursor->getTable(), argc, argv);
 #endif
-  std::vector<Constraint> constraints;
-  int j = 0;
-  for(int i = 0; i < indexInfo->nConstraint; i++) {
-    if(!indexInfo->aConstraint[i].usable) {
-      continue;
-    }
-
-    ValueType type = Null;
-    int64_t intValue = 0;
-    double doubleValue = 0;
-    std::vector<unsigned char> blobValue;
-    int sqliteType = sqlite3_value_type(argv[j]);
-
-    if(sqliteType == SQLITE_INTEGER) {
-      type = Integer;
-      intValue = sqlite3_value_int64(argv[j]);
-    } else if(sqliteType == SQLITE_FLOAT) {
-      type = Double;
-      doubleValue = sqlite3_value_double(argv[j]);
-    } else if(sqliteType == SQLITE_TEXT) {
-      type = Text;
-      int len = sqlite3_value_bytes(argv[j]);
-      const unsigned char* ptr = sqlite3_value_text(argv[j]);
-      for(int k = 0; k < len; k++) {
-        blobValue.push_back(ptr[k]);
+    std::vector<Constraint> constraints;
+    int j = 0;
+    for(int i = 0; i < indexInfo->nConstraint; i++) {
+      if(!indexInfo->aConstraint[i].usable) {
+        continue;
       }
-    } else if(sqliteType == SQLITE_BLOB) {
-      type = Blob;
-      int len = sqlite3_value_bytes(argv[j]);
-      const unsigned char* ptr = (const unsigned char*)sqlite3_value_blob(argv[j]);
-      for(int k = 0; k < len; k++) {
-        blobValue.push_back(ptr[k]);
-      }
-    } else if(sqliteType == SQLITE_NULL) {
-      type = Null;
-    }
 
-    Constraint constraint(
-      indexInfo->aConstraint[i].iColumn,
-      constraintOperatorFromSqlite(indexInfo->aConstraint[i].op),
-      type,
-      intValue,
-      doubleValue,
-      blobValue);
-    constraints.push_back(constraint);
-    j++;
+      ValueType type = Null;
+      int64_t intValue = 0;
+      double doubleValue = 0;
+      std::vector<unsigned char> blobValue;
+      int sqliteType = sqlite3_value_type(argv[j]);
+
+      if(sqliteType == SQLITE_INTEGER) {
+        type = Integer;
+        intValue = sqlite3_value_int64(argv[j]);
+      } else if(sqliteType == SQLITE_FLOAT) {
+        type = Double;
+        doubleValue = sqlite3_value_double(argv[j]);
+      } else if(sqliteType == SQLITE_TEXT) {
+        type = Text;
+        int len = sqlite3_value_bytes(argv[j]);
+        const unsigned char* ptr = sqlite3_value_text(argv[j]);
+        for(int k = 0; k < len; k++) {
+          blobValue.push_back(ptr[k]);
+        }
+      } else if(sqliteType == SQLITE_BLOB) {
+        type = Blob;
+        int len = sqlite3_value_bytes(argv[j]);
+        const unsigned char* ptr = (const unsigned char*)sqlite3_value_blob(argv[j]);
+        for(int k = 0; k < len; k++) {
+          blobValue.push_back(ptr[k]);
+        }
+      } else if(sqliteType == SQLITE_NULL) {
+        type = Null;
+      }
+
+      Constraint constraint(
+        indexInfo->aConstraint[i].iColumn,
+        constraintOperatorFromSqlite(indexInfo->aConstraint[i].op),
+        type,
+        intValue,
+        doubleValue,
+        blobValue);
+      constraints.push_back(constraint);
+      j++;
+    }
+    cursor->reset(constraints);
+    return parquetNext(cur);
+  } catch(std::bad_alloc& ba) {
+    return SQLITE_NOMEM;
+  } catch(std::exception& e) {
+    return SQLITE_ERROR;
   }
-  cursor->reset(constraints);
-  return parquetNext(cur);
 }
 
 /*
@@ -450,66 +480,72 @@ static int parquetBestIndex(
   sqlite3_vtab *tab,
   sqlite3_index_info *pIdxInfo
 ){
+  try {
 
 #ifdef DEBUG
-  ParquetTable* table = ((sqlite3_vtab_parquet*)tab)->table;
-  printf("xBestIndex: nConstraint=%d, nOrderBy=%d\n", pIdxInfo->nConstraint, pIdxInfo->nOrderBy);
-  debugConstraints(pIdxInfo, table, 0, NULL);
+    ParquetTable* table = ((sqlite3_vtab_parquet*)tab)->table;
+    printf("xBestIndex: nConstraint=%d, nOrderBy=%d\n", pIdxInfo->nConstraint, pIdxInfo->nOrderBy);
+    debugConstraints(pIdxInfo, table, 0, NULL);
 #endif
 
-  if(pIdxInfo->nConstraint == 0) {
-    pIdxInfo->estimatedCost = 1000000000000;
-    pIdxInfo->idxNum = 0;
-  } else {
-    pIdxInfo->estimatedCost = 1;
-    pIdxInfo->idxNum = 1;
-    int j = 0;
-    for(int i = 0; i < pIdxInfo->nConstraint; i++) {
-      if(pIdxInfo->aConstraint[i].usable) {
-        j++;
-        pIdxInfo->aConstraintUsage[i].argvIndex = j;
+    if(pIdxInfo->nConstraint == 0) {
+      pIdxInfo->estimatedCost = 1000000000000;
+      pIdxInfo->idxNum = 0;
+    } else {
+      pIdxInfo->estimatedCost = 1;
+      pIdxInfo->idxNum = 1;
+      int j = 0;
+      for(int i = 0; i < pIdxInfo->nConstraint; i++) {
+        if(pIdxInfo->aConstraint[i].usable) {
+          j++;
+          pIdxInfo->aConstraintUsage[i].argvIndex = j;
+        }
       }
     }
-  }
 
-  size_t dupeSize = sizeof(sqlite3_index_info) +
-    //pIdxInfo->nConstraint * sizeof(sqlite3_index_constraint) +
-    pIdxInfo->nConstraint * sizeof(sqlite3_index_info::sqlite3_index_constraint) +
-    pIdxInfo->nOrderBy * sizeof(sqlite3_index_info::sqlite3_index_orderby) +
-    pIdxInfo->nConstraint * sizeof(sqlite3_index_info::sqlite3_index_constraint_usage);
-  sqlite3_index_info* dupe = (sqlite3_index_info*)sqlite3_malloc(dupeSize);
-  pIdxInfo->idxStr = (char*)dupe;
-  pIdxInfo->needToFreeIdxStr = 1;
-
-  memset(dupe, 0, dupeSize);
-  memcpy(dupe, pIdxInfo, sizeof(sqlite3_index_info));
-
-  dupe->aConstraint = (sqlite3_index_info::sqlite3_index_constraint*)((char*)dupe + sizeof(sqlite3_index_info));
-  dupe->aOrderBy = (sqlite3_index_info::sqlite3_index_orderby*)((char*)dupe +
-      sizeof(sqlite3_index_info) +
-      pIdxInfo->nConstraint * sizeof(sqlite3_index_info::sqlite3_index_constraint));
-  dupe->aConstraintUsage = (sqlite3_index_info::sqlite3_index_constraint_usage*)((char*)dupe +
-      sizeof(sqlite3_index_info) +
+    size_t dupeSize = sizeof(sqlite3_index_info) +
+      //pIdxInfo->nConstraint * sizeof(sqlite3_index_constraint) +
       pIdxInfo->nConstraint * sizeof(sqlite3_index_info::sqlite3_index_constraint) +
-      pIdxInfo->nOrderBy * sizeof(sqlite3_index_info::sqlite3_index_orderby));
+      pIdxInfo->nOrderBy * sizeof(sqlite3_index_info::sqlite3_index_orderby) +
+      pIdxInfo->nConstraint * sizeof(sqlite3_index_info::sqlite3_index_constraint_usage);
+    sqlite3_index_info* dupe = (sqlite3_index_info*)sqlite3_malloc(dupeSize);
+    pIdxInfo->idxStr = (char*)dupe;
+    pIdxInfo->needToFreeIdxStr = 1;
+
+    memset(dupe, 0, dupeSize);
+    memcpy(dupe, pIdxInfo, sizeof(sqlite3_index_info));
+
+    dupe->aConstraint = (sqlite3_index_info::sqlite3_index_constraint*)((char*)dupe + sizeof(sqlite3_index_info));
+    dupe->aOrderBy = (sqlite3_index_info::sqlite3_index_orderby*)((char*)dupe +
+        sizeof(sqlite3_index_info) +
+        pIdxInfo->nConstraint * sizeof(sqlite3_index_info::sqlite3_index_constraint));
+    dupe->aConstraintUsage = (sqlite3_index_info::sqlite3_index_constraint_usage*)((char*)dupe +
+        sizeof(sqlite3_index_info) +
+        pIdxInfo->nConstraint * sizeof(sqlite3_index_info::sqlite3_index_constraint) +
+        pIdxInfo->nOrderBy * sizeof(sqlite3_index_info::sqlite3_index_orderby));
 
 
-  for(int i = 0; i < pIdxInfo->nConstraint; i++) {
-    dupe->aConstraint[i].iColumn = pIdxInfo->aConstraint[i].iColumn;
-    dupe->aConstraint[i].op = pIdxInfo->aConstraint[i].op;
-    dupe->aConstraint[i].usable = pIdxInfo->aConstraint[i].usable;
-    dupe->aConstraint[i].iTermOffset = pIdxInfo->aConstraint[i].iTermOffset;
+    for(int i = 0; i < pIdxInfo->nConstraint; i++) {
+      dupe->aConstraint[i].iColumn = pIdxInfo->aConstraint[i].iColumn;
+      dupe->aConstraint[i].op = pIdxInfo->aConstraint[i].op;
+      dupe->aConstraint[i].usable = pIdxInfo->aConstraint[i].usable;
+      dupe->aConstraint[i].iTermOffset = pIdxInfo->aConstraint[i].iTermOffset;
 
-    dupe->aConstraintUsage[i].argvIndex = pIdxInfo->aConstraintUsage[i].argvIndex;
-    dupe->aConstraintUsage[i].omit = pIdxInfo->aConstraintUsage[i].omit;
+      dupe->aConstraintUsage[i].argvIndex = pIdxInfo->aConstraintUsage[i].argvIndex;
+      dupe->aConstraintUsage[i].omit = pIdxInfo->aConstraintUsage[i].omit;
+    }
+
+    for(int i = 0; i < pIdxInfo->nOrderBy; i++) {
+      dupe->aOrderBy[i].iColumn = pIdxInfo->aOrderBy[i].iColumn;
+      dupe->aOrderBy[i].desc = pIdxInfo->aOrderBy[i].desc;
+    }
+
+    return SQLITE_OK;
+  } catch(std::bad_alloc& ba) {
+    return SQLITE_NOMEM;
+  } catch(std::exception& e) {
+    return SQLITE_ERROR;
   }
-
-  for(int i = 0; i < pIdxInfo->nOrderBy; i++) {
-    dupe->aOrderBy[i].iColumn = pIdxInfo->aOrderBy[i].iColumn;
-    dupe->aOrderBy[i].desc = pIdxInfo->aOrderBy[i].desc;
-  }
-
-  return SQLITE_OK;
 }
 
 
