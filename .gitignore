@@ -48,3 +48,6 @@
 tests/queries
 /testcase-bootstrap.sql
 /test.db
+/tests/test.db
+/tests/results.bad_alloc
+/tests/libfailmalloc

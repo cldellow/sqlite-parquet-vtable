@@ -87,14 +87,15 @@ def test_table(conn, table):
     for i in range(1000):
         test_statement(conn, table, column_values, all_values)
 
-def test_db(db_file, tables):
+def test_db(db_file, extension_file, tables):
     conn = sqlite3.connect(db_file)
     conn.enable_load_extension(True)
-    conn.load_extension('parquet/libparquet.so')
+    conn.load_extension(extension_file)
     conn.enable_load_extension(False)
     for table in tables:
         test_table(conn, table)
 
 if __name__ == '__main__':
     db_file = os.path.abspath(os.path.join(__file__, '..', '..', 'test.db'))
-    test_db(db_file, ['nulls', 'no_nulls'])
+    extension_file = os.path.abspath(os.path.join(__file__, '..', '..', 'parquet', 'libparquet.so'))
+    test_db(db_file, extension_file, ['nulls', 'no_nulls'])
