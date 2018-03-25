@@ -2,22 +2,9 @@
 
 A SQLite [virtual table](https://sqlite.org/vtab.html) extension to expose Parquet files as SQL tables.
 
-## Building
+## Download
 
-1. Install [`parquet-cpp`](https://github.com/apache/parquet-cpp)
-    1. Master appears to be broken for text row group stats; see https://github.com/cldellow/sqlite-parquet-vtable/issues/5 for which versions to use
-2. Run `./build-sqlite` to fetch and build the SQLite dev bits
-3. Run `./parquet/make` to build the module
-    1. You will need to fixup the paths in this file to point at your local parquet-cpp folder.
-
-## Tests
-
-Run:
-
-```
-tests/create-queries-from-templates
-tests/test-all
-```
+You can fetch a version built for Ubuntu 16.04 at https://s3.amazonaws.com/cldellow/public/libparquet/libparquet.so.xz
 
 ## Use
 
@@ -100,3 +87,26 @@ These are not currently supported:
 
 * UINT8/UINT16/UINT32/UINT64
 * DECIMAL
+
+## Building
+
+If you're a masochist, you can try to build this yourself:
+
+1. Install [`parquet-cpp`](https://github.com/apache/parquet-cpp)
+    1. Master appears to be broken for text row group stats; see https://github.com/cldellow/sqlite-parquet-vtable/issues/5 for which versions to use
+2. Run `./build-sqlite` to fetch and build the SQLite dev bits
+3. Run `./parquet/make` to build the module
+    1. You will need to fixup the paths in this file to point at your local parquet-cpp folder.
+
+You're almost certainly going to regret your life. https://stackoverflow.com/questions/48157198/how-can-i-statically-link-arrow-when-building-parquet-cpp may be useful.
+
+## Tests
+
+Run:
+
+```
+tests/create-queries-from-templates
+tests/test-all
+```
+
+
