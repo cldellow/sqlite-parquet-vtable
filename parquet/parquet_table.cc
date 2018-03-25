@@ -2,9 +2,7 @@
 
 #include "parquet/api/reader.h"
 
-ParquetTable::ParquetTable(std::string file) {
-  this->file = file;
-
+ParquetTable::ParquetTable(std::string file, std::string tableName): file(file), tableName(tableName) {
   std::unique_ptr<parquet::ParquetFileReader> reader = parquet::ParquetFileReader::OpenFile(file.data());
   metadata = reader->metadata();
 }
@@ -138,3 +136,6 @@ std::string ParquetTable::CreateStatement() {
 }
 
 std::shared_ptr<parquet::FileMetaData> ParquetTable::getMetadata() { return metadata; }
+
+const std::string& ParquetTable::getFile() { return file; }
+const std::string& ParquetTable::getTableName() { return tableName; }

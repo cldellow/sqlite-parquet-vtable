@@ -6,16 +6,19 @@
 #include "parquet/api/reader.h"
 
 class ParquetTable {
+  std::string file;
+  std::string tableName;
   std::vector<std::string> columnNames;
   std::shared_ptr<parquet::FileMetaData> metadata;
 
 
 public:
-  ParquetTable(std::string file);
+  ParquetTable(std::string file, std::string tableName);
   std::string CreateStatement();
-  std::string file;
   std::string columnName(int idx);
   std::shared_ptr<parquet::FileMetaData> getMetadata();
+  const std::string& getFile();
+  const std::string& getTableName();
 };
 
 #endif

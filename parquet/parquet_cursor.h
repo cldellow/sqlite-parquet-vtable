@@ -56,9 +56,12 @@ public:
 
   void ensureColumn(int col);
   bool isNull(int col);
+  unsigned int getNumRowGroups() const;
+  unsigned int getNumConstraints() const;
+  const Constraint& getConstraint(unsigned int i) const;
   parquet::Type::type getPhysicalType(int col);
   parquet::LogicalType::type getLogicalType(int col);
-  ParquetTable* getTable();
+  ParquetTable* getTable() const;
 
   int getInt32(int col);
   long getInt64(int col);

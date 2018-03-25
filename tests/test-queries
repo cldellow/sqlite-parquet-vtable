@@ -47,7 +47,7 @@ main() {
   fi
 
   cat "$root"/parquet-generator/*.sql > "$root"/testcase-bootstrap.sql
-  rm test.db
+  rm -f test.db
   "$root"/sqlite/sqlite3 test.db -init "$root"/testcase-bootstrap.sql < /dev/null
   if [ ! -v NO_DEBUG ] && [ "$(cat testcases.txt | wc -l)" == "1" ]; then
     set -x

@@ -1,7 +1,6 @@
 #include "parquet_cursor.h"
 
-ParquetCursor::ParquetCursor(ParquetTable* table) {
-  this->table = table;
+ParquetCursor::ParquetCursor(ParquetTable* table): table(table) {
   reader = NULL;
   reset(std::vector<Constraint>());
 }
@@ -518,6 +517,7 @@ bool ParquetCursor::currentRowSatisfiesDoubleFilter(Constraint& constraint) {
 // This avoids opening rowgroups that can't return useful
 // data, which provides substantial performance benefits.
 bool ParquetCursor::currentRowGroupSatisfiesFilter() {
+  bool overallRv = true;
   for(unsigned int i = 0; i < constraints.size(); i++) {
     int column = constraints[i].column;
     int op = constraints[i].op;
@@ -527,47 +527,52 @@ bool ParquetCursor::currentRowGroupSatisfiesFilter() {
       rv = currentRowGroupSatisfiesRowIdFilter(constraints[i]);
     } else {
       std::unique_ptr<parquet::ColumnChunkMetaData> md = rowGroupMetadata->ColumnChunk(column);
-      if(!md->is_stats_set()) {
-        continue;
-      }
-      std::shared_ptr<parquet::RowGroupStatistics> stats = md->statistics();
+      if(md->is_stats_set()) {
+        std::shared_ptr<parquet::RowGroupStatistics> stats = md->statistics();
 
-      // SQLite is much looser with types than you might expect if you
-      // come from a Postgres background. The constraint '30.0' (that is,
-      // a string containing a floating point number) should be treated
-      // as equal to a field containing an integer 30.
-      //
-      // This means that even if the parquet physical type is integer,
-      // the constraint type may be a string, so dispatch to the filter
-      // fn based on the Parquet type.
+        // SQLite is much looser with types than you might expect if you
+        // come from a Postgres background. The constraint '30.0' (that is,
+        // a string containing a floating point number) should be treated
+        // as equal to a field containing an integer 30.
+        //
+        // This means that even if the parquet physical type is integer,
+        // the constraint type may be a string, so dispatch to the filter
+        // fn based on the Parquet type.
 
-      if(op == IsNull) {
-        rv = stats->null_count() > 0;
-      } else if(op == IsNotNull) {
-        rv = stats->num_values() > 0;
-      } else {
-        parquet::Type::type pqType = types[column];
+        if(op == IsNull) {
+          rv = stats->null_count() > 0;
+        } else if(op == IsNotNull) {
+          rv = stats->num_values() > 0;
+        } else {
+          parquet::Type::type pqType = types[column];
 
-        if(pqType == parquet::Type::BYTE_ARRAY && logicalTypes[column] == parquet::LogicalType::UTF8) {
-          rv = currentRowGroupSatisfiesTextFilter(constraints[i], stats);
-        } else if(pqType == parquet::Type::BYTE_ARRAY) {
-          rv = currentRowGroupSatisfiesBlobFilter(constraints[i], stats);
-        } else if(pqType == parquet::Type::INT32 ||
-                  pqType == parquet::Type::INT64 ||
-                  pqType == parquet::Type::INT96 ||
-                  pqType == parquet::Type::BOOLEAN) {
-          rv = currentRowGroupSatisfiesIntegerFilter(constraints[i], stats);
-        } else if(pqType == parquet::Type::FLOAT || pqType == parquet::Type::DOUBLE) {
-          rv = currentRowGroupSatisfiesDoubleFilter(constraints[i], stats);
+          if(pqType == parquet::Type::BYTE_ARRAY && logicalTypes[column] == parquet::LogicalType::UTF8) {
+            rv = currentRowGroupSatisfiesTextFilter(constraints[i], stats);
+          } else if(pqType == parquet::Type::BYTE_ARRAY) {
+            rv = currentRowGroupSatisfiesBlobFilter(constraints[i], stats);
+          } else if(pqType == parquet::Type::INT32 ||
+                    pqType == parquet::Type::INT64 ||
+                    pqType == parquet::Type::INT96 ||
+                    pqType == parquet::Type::BOOLEAN) {
+            rv = currentRowGroupSatisfiesIntegerFilter(constraints[i], stats);
+          } else if(pqType == parquet::Type::FLOAT || pqType == parquet::Type::DOUBLE) {
+            rv = currentRowGroupSatisfiesDoubleFilter(constraints[i], stats);
+          }
         }
       }
     }
 
-    if(!rv)
-      return false;
+    // and it with the existing actual, which may have come from a previous run
+    rv = rv && constraints[i].bitmap.getActualMembership(rowGroupId);
+    if(!rv) {
+      constraints[i].bitmap.setEstimatedMembership(rowGroupId, rv);
+      constraints[i].bitmap.setActualMembership(rowGroupId, rv);
+    }
+    overallRv = overallRv && rv;
   }
 
-  return true;
+//  printf("rowGroup %d %s\n", rowGroupId, overallRv ? "may satisfy" : "does not satisfy");
+  return overallRv;
 }
 
 
@@ -609,9 +614,22 @@ start:
   // Increment rowId so currentRowGroupSatisfiesRowIdFilter can access it;
   // it'll get decremented by our caller
   rowId++;
+
+  // We're going to scan this row group; reset the expectation of discovering
+  // a row
+  for(unsigned int i = 0; i < constraints.size(); i++) {
+    if(rowGroupId > 0 && constraints[i].rowGroupId == rowGroupId - 1) {
+      constraints[i].bitmap.setActualMembership(rowGroupId - 1, constraints[i].hadRows);
+    }
+    constraints[i].hadRows = false;
+  }
+
   if(!currentRowGroupSatisfiesFilter())
     goto start;
 
+  for(unsigned int i = 0; i < constraints.size(); i++) {
+    constraints[i].rowGroupId = rowGroupId;
+  }
   return true;
 }
 
@@ -623,6 +641,7 @@ start:
 // and the extension, which can add up on a dataset of tens
 // of millions of rows.
 bool ParquetCursor::currentRowSatisfiesFilter() {
+  bool overallRv = true;
   for(unsigned int i = 0; i < constraints.size(); i++) {
     bool rv = true;
     int column = constraints[i].column;
@@ -648,13 +667,18 @@ bool ParquetCursor::currentRowSatisfiesFilter() {
       }
     }
 
-    if(!rv)
-      return false;
+    // it defaults to false; so only set it if true
+    // ideally we'd short-circuit if we'd already set this group as visited
+    if(rv) {
+      constraints[i].hadRows = true;
+    }
+    overallRv = overallRv && rv;
   }
-  return true;
+  return overallRv;
 }
 
 void ParquetCursor::next() {
+  // Returns true if we've crossed a row group boundary
 start:
   if(rowsLeftInRowGroup == 0) {
     if(!nextRowGroup()) {
@@ -672,7 +696,6 @@ start:
   rowId++;
   if(!currentRowSatisfiesFilter())
     goto start;
-
 }
 
 int ParquetCursor::getRowId() {
@@ -939,7 +962,7 @@ void ParquetCursor::reset(std::vector<Constraint> constraints) {
   // TODO: consider having a long lived handle in ParquetTable that can be borrowed
   // without incurring the cost of opening the file from scratch twice
   reader = parquet::ParquetFileReader::OpenFile(
-      table->file.data(),
+      table->getFile().data(),
       true,
       parquet::default_reader_properties(),
       table->getMetadata());
@@ -955,4 +978,10 @@ void ParquetCursor::reset(std::vector<Constraint> constraints) {
   numRowGroups = reader->metadata()->num_row_groups();
 }
 
-ParquetTable* ParquetCursor::getTable() { return table; }
+ParquetTable* ParquetCursor::getTable() const { return table; }
+
+unsigned int ParquetCursor::getNumRowGroups() const { return numRowGroups; }
+unsigned int ParquetCursor::getNumConstraints() const { return constraints.size(); }
+const Constraint& ParquetCursor::getConstraint(unsigned int i) const { return constraints[i]; }
+
+

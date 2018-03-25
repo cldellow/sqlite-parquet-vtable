@@ -72,6 +72,18 @@ constraints before returning control to SQLite's virtual machine. This minimizes
 the number of allocations performed when many rows are filtered out by
 the user's criteria.
 
+### Memoized slices
+
+Individual clauses are mapped to the row groups they match.
+
+eg going on row group statistics, which store minimum and maximum values, a clause
+like `WHERE city = 'Dawson Creek'` may match 80% of row groups.
+
+In reality, it may only be present in one or two row groups.
+
+This is recorded in a shadow table so future queries that contain that clause
+can read only the necessary row groups.
+
 ### Types
 
 These Parquet types are supported:
