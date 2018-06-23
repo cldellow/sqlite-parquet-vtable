@@ -586,6 +586,17 @@ start:
     return false;
   }
 
+  while(table->getNumColumns() >= scanners.size()) {
+    scanners.push_back(std::shared_ptr<parquet::Scanner>());
+    // If it doesn't exist, it's the rowId as of the last nextRowGroup call
+    colRows.push_back(rowGroupStartRowId);
+    colNulls.push_back(false);
+    colIntValues.push_back(0);
+    colDoubleValues.push_back(0);
+    colByteArrayValues.push_back(parquet::ByteArray());
+  }
+
+
   rowGroupStartRowId = rowId;
   rowGroupId++;
   rowGroupMetadata = reader->metadata()->RowGroup(rowGroupId);
@@ -712,16 +723,6 @@ void ParquetCursor::ensureColumn(int col) {
     return;
 
   // need to ensure a scanner exists (and skip the # of rows in the rowgroup)
-  while((unsigned int)col >= scanners.size()) {
-    scanners.push_back(std::shared_ptr<parquet::Scanner>());
-    // If it doesn't exist, it's the rowId as of the last nextRowGroup call
-    colRows.push_back(rowGroupStartRowId);
-    colNulls.push_back(false);
-    colIntValues.push_back(0);
-    colDoubleValues.push_back(0);
-    colByteArrayValues.push_back(parquet::ByteArray());
-  }
-
   if(scanners[col].get() == NULL) {
     std::shared_ptr<parquet::ColumnReader> colReader = rowGroup->Column(col);
     scanners[col] = parquet::Scanner::Make(colReader);

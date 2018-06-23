@@ -13,6 +13,11 @@ std::string ParquetTable::columnName(int i) {
   return columnNames[i];
 }
 
+unsigned int ParquetTable::getNumColumns() {
+  return columnNames.size();
+}
+
+
 std::string ParquetTable::CreateStatement() {
   std::unique_ptr<parquet::ParquetFileReader> reader = parquet::ParquetFileReader::OpenFile(
       file.data(),

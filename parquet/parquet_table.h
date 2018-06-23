@@ -16,6 +16,7 @@ public:
   ParquetTable(std::string file, std::string tableName);
   std::string CreateStatement();
   std::string columnName(int idx);
+  unsigned int getNumColumns();
   std::shared_ptr<parquet::FileMetaData> getMetadata();
   const std::string& getFile();
   const std::string& getTableName();
