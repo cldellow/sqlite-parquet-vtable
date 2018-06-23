@@ -4,16 +4,17 @@ CC = g++
 CFLAGS = -I ../sqlite -O3 -std=c++11 -Wall -fPIC -g
 PARQUET_LIB = $(PARQUET_CPP)/build/release/libparquet.a
 THRIFT_LIB = $(PARQUET_CPP)/thrift_ep/src/thrift_ep-install/lib/libthrift.a
-LZ4_LIB = /tmp/parquet-deps/lz4/lib/liblz4.a
+PARQUET_DEPS = /home/cldellow/src/parquet-deps
+LZ4_LIB = $(PARQUET_DEPS)/lz4/lib/liblz4.a
 ARROW_LIB = $(PARQUET_CPP)/arrow_ep-prefix/src/arrow_ep-build/release/libarrow.a
-SNAPPY_LIB = /tmp/parquet-deps/snappy/build/libsnappy.a
-ZSTD_LIB = /tmp/parquet-deps/zstd/lib/libzstd.a
+SNAPPY_LIB = $(PARQUET_DEPS)/snappy/build/libsnappy.a
+ZSTD_LIB = $(PARQUET_DEPS)/zstd/lib/libzstd.a
 BOOST_LIB = /usr/lib/x86_64-linux-gnu/libboost_regex.so
 BOOST_SYSTEM_LIB = /usr/lib/x86_64-linux-gnu/libboost_system.so
 BOOST_FILESYSTEM_LIB = /usr/lib/x86_64-linux-gnu/libboost_filesystem.so
-BROTLI_COMMON_LIB = /tmp/parquet-deps/brotli/out/libbrotlicommon-static.a
-BROTLI_ENC_LIB = /tmp/parquet-deps/brotli/out/libbrotlienc-static.a
-BROTLI_DEC_LIB = /tmp/parquet-deps/brotli/out/libbrotlidec-static.a
+BROTLI_COMMON_LIB = $(PARQUET_DEPS)/brotli/out/libbrotlicommon-static.a
+BROTLI_ENC_LIB = $(PARQUET_DEPS)/brotli/out/libbrotlienc-static.a
+BROTLI_DEC_LIB = $(PARQUET_DEPS)/brotli/out/libbrotlidec-static.a
 
 LDFLAGS = -O3 \
 	  -Wl,--whole-archive $(PARQUET_LIB) $(LZ4_LIB) $(ZSTD_LIB) $(THRIFT_LIB) $(SNAPPY_LIB) $(ARROW_LIB) \
