@@ -208,10 +208,6 @@ void persistConstraints(sqlite3* db, ParquetCursor* cursor) {
 */
 static int parquetClose(sqlite3_vtab_cursor *cur){
   sqlite3_vtab_cursor_parquet* vtab_cursor_parquet = (sqlite3_vtab_cursor_parquet*)cur;
-  sqlite3_vtab_parquet* vtab_parquet = (sqlite3_vtab_parquet*)(vtab_cursor_parquet->base.pVtab);
-  ParquetCursor* cursor = vtab_cursor_parquet->cursor;
-  persistConstraints(vtab_parquet->db, cursor);
-
   vtab_cursor_parquet->cursor->close();
   delete vtab_cursor_parquet->cursor;
   sqlite3_free(cur);
@@ -382,8 +378,12 @@ static int parquetRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid){
 */
 static int parquetEof(sqlite3_vtab_cursor *cur){
   ParquetCursor* cursor = ((sqlite3_vtab_cursor_parquet*)cur)->cursor;
-  if(cursor->eof())
+  if(cursor->eof()) {
+    sqlite3_vtab_cursor_parquet* vtab_cursor_parquet = (sqlite3_vtab_cursor_parquet*)cur;
+    sqlite3_vtab_parquet* vtab_parquet = (sqlite3_vtab_parquet*)(vtab_cursor_parquet->base.pVtab);
+    persistConstraints(vtab_parquet->db, cursor);
     return 1;
+  }
   return 0;
 }
 
