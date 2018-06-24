@@ -706,7 +706,7 @@ start:
 
   rowsLeftInRowGroup--;
   rowId++;
-  if(!currentRowSatisfiesFilter())
+  if(constraints.size() > 0 && !currentRowSatisfiesFilter())
     goto start;
 }
 
