@@ -630,9 +630,12 @@ start:
   // a row
   for(unsigned int i = 0; i < constraints.size(); i++) {
     if(rowGroupId > 0 && constraints[i].rowGroupId == rowGroupId - 1) {
-      constraints[i].bitmap.setActualMembership(rowGroupId - 1, constraints[i].hadRows);
+      if(constraints[i].valid || constraints[i].hadRows) {
+        constraints[i].bitmap.setActualMembership(rowGroupId - 1, constraints[i].hadRows);
+      }
     }
     constraints[i].hadRows = false;
+    constraints[i].valid = true;
   }
 
   if(!currentRowGroupSatisfiesFilter())
@@ -652,7 +655,6 @@ start:
 // and the extension, which can add up on a dataset of tens
 // of millions of rows.
 bool ParquetCursor::currentRowSatisfiesFilter() {
-  bool overallRv = true;
   for(unsigned int i = 0; i < constraints.size(); i++) {
     bool rv = true;
     int column = constraints[i].column;
@@ -682,10 +684,15 @@ bool ParquetCursor::currentRowSatisfiesFilter() {
     // ideally we'd short-circuit if we'd already set this group as visited
     if(rv) {
       constraints[i].hadRows = true;
+    } else {
+      // When we short circuit, mark the other constraints as not evaluated to avoid persisting incorrect data.
+      for(unsigned int j = i + 1; j < constraints.size(); j++) {
+        constraints[j].valid = false;
+      }
+      return false;
     }
-    overallRv = overallRv && rv;
   }
-  return overallRv;
+  return true;
 }
 
 void ParquetCursor::next() {
