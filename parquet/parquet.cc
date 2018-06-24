@@ -650,6 +650,11 @@ static int parquetBestIndex(
     printf("%llu xBestIndex: nConstraint=%d, nOrderBy=%d\n", millisecondsSinceEpoch, pIdxInfo->nConstraint, pIdxInfo->nOrderBy);
     debugConstraints(pIdxInfo, table, 0, NULL);
 #endif
+    // We traverse in rowid ascending order, so if they're asking for it to be ordered like that,
+    // we can tell SQLite that it's guaranteed. This speeds up some DB viewer utilities that
+    // use rowids for pagination.
+    if(pIdxInfo->nOrderBy == 1 && pIdxInfo->aOrderBy[0].iColumn == -1 && pIdxInfo->aOrderBy[0].desc == 0)
+      pIdxInfo->orderByConsumed = 1;
 
     if(pIdxInfo->nConstraint == 0) {
       pIdxInfo->estimatedCost = 1000000000000;
@@ -659,11 +664,6 @@ static int parquetBestIndex(
       pIdxInfo->idxNum = 1;
       int j = 0;
 
-      // We traverse in rowid ascending order, so if they're asking for it to be ordered like that,
-      // we can tell SQLite that it's guaranteed. This speeds up some DB viewer utilities that
-      // use rowids for pagination.
-      if(pIdxInfo->nOrderBy == 1 && pIdxInfo->aOrderBy[0].iColumn == -1 && pIdxInfo->aOrderBy[0].desc == 0)
-        pIdxInfo->orderByConsumed = 1;
       for(int i = 0; i < pIdxInfo->nConstraint; i++) {
         if(pIdxInfo->aConstraint[i].usable) {
           j++;
