@@ -666,17 +666,19 @@ bool ParquetCursor::currentRowSatisfiesFilter() {
     } else if(op == IsNotNull) {
       rv = !isNull(column);
     } else {
-      parquet::Type::type pqType = types[column];
 
-      if(pqType == parquet::Type::BYTE_ARRAY && logicalTypes[column] == parquet::LogicalType::UTF8) {
+      if(logicalTypes[column] == parquet::LogicalType::UTF8) {
         rv = currentRowSatisfiesTextFilter(constraints[i]);
-      } else if(pqType == parquet::Type::INT32 ||
-                pqType == parquet::Type::INT64 ||
-                pqType == parquet::Type::INT96 ||
-                pqType == parquet::Type::BOOLEAN) {
-        rv = currentRowSatisfiesIntegerFilter(constraints[i]);
-      } else if(pqType == parquet::Type::FLOAT || pqType == parquet::Type::DOUBLE) {
-        rv = currentRowSatisfiesDoubleFilter(constraints[i]);
+      } else {
+        parquet::Type::type pqType = types[column];
+        if(pqType == parquet::Type::INT32 ||
+           pqType == parquet::Type::INT64 ||
+           pqType == parquet::Type::INT96 ||
+           pqType == parquet::Type::BOOLEAN) {
+          rv = currentRowSatisfiesIntegerFilter(constraints[i]);
+        } else if(pqType == parquet::Type::FLOAT || pqType == parquet::Type::DOUBLE) {
+          rv = currentRowSatisfiesDoubleFilter(constraints[i]);
+        }
       }
     }
 
