@@ -517,7 +517,6 @@ bool ParquetCursor::currentRowSatisfiesDoubleFilter(Constraint& constraint) {
 // This avoids opening rowgroups that can't return useful
 // data, which provides substantial performance benefits.
 bool ParquetCursor::currentRowGroupSatisfiesFilter() {
-  bool overallRv = true;
   for(unsigned int i = 0; i < constraints.size(); i++) {
     int column = constraints[i].column;
     int op = constraints[i].op;
@@ -567,12 +566,12 @@ bool ParquetCursor::currentRowGroupSatisfiesFilter() {
     if(!rv) {
       constraints[i].bitmap.setEstimatedMembership(rowGroupId, rv);
       constraints[i].bitmap.setActualMembership(rowGroupId, rv);
+      return rv;
     }
-    overallRv = overallRv && rv;
   }
 
 //  printf("rowGroup %d %s\n", rowGroupId, overallRv ? "may satisfy" : "does not satisfy");
-  return overallRv;
+  return true;
 }
 
 

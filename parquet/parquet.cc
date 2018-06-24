@@ -18,12 +18,14 @@ SQLITE_EXTENSION_INIT1
 #include <ctype.h>
 #include <stdio.h>
 #include <iomanip>
-
+#include <sys/time.h>
 #include <memory>
 
 #include "parquet_table.h"
 #include "parquet_cursor.h"
 #include "parquet_filter.h"
+
+//#define DEBUG
 
 /* Forward references to the various virtual table methods implemented
  * in this file. */
@@ -532,7 +534,13 @@ static int parquetFilter(
     sqlite3_index_info* indexInfo = (sqlite3_index_info*)idxStr;
 
 #ifdef DEBUG
-    printf("xFilter: idxNum=%d, idxStr=%lu, argc=%d\n", idxNum, (long unsigned int)idxStr, argc);
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  unsigned long long millisecondsSinceEpoch =
+    (unsigned long long)(tv.tv_sec) * 1000 +
+    (unsigned long long)(tv.tv_usec) / 1000;
+
+    printf("%llu xFilter: idxNum=%d, idxStr=%lu, argc=%d\n", millisecondsSinceEpoch, idxNum, (long unsigned int)idxStr, argc);
     debugConstraints(indexInfo, cursor->getTable(), argc, argv);
 #endif
     std::vector<Constraint> constraints;
@@ -631,8 +639,15 @@ static int parquetBestIndex(
   try {
 
 #ifdef DEBUG
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    unsigned long long millisecondsSinceEpoch =
+      (unsigned long long)(tv.tv_sec) * 1000 +
+      (unsigned long long)(tv.tv_usec) / 1000;
+
+
     ParquetTable* table = ((sqlite3_vtab_parquet*)tab)->table;
-    printf("xBestIndex: nConstraint=%d, nOrderBy=%d\n", pIdxInfo->nConstraint, pIdxInfo->nOrderBy);
+    printf("%llu xBestIndex: nConstraint=%d, nOrderBy=%d\n", millisecondsSinceEpoch, pIdxInfo->nConstraint, pIdxInfo->nOrderBy);
     debugConstraints(pIdxInfo, table, 0, NULL);
 #endif
 
@@ -647,6 +662,7 @@ static int parquetBestIndex(
         if(pIdxInfo->aConstraint[i].usable) {
           j++;
           pIdxInfo->aConstraintUsage[i].argvIndex = j;
+//          pIdxInfo->aConstraintUsage[i].omit = 1;
         }
       }
     }
