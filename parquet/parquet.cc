@@ -658,6 +658,12 @@ static int parquetBestIndex(
       pIdxInfo->estimatedCost = 1;
       pIdxInfo->idxNum = 1;
       int j = 0;
+
+      // We traverse in rowid ascending order, so if they're asking for it to be ordered like that,
+      // we can tell SQLite that it's guaranteed. This speeds up some DB viewer utilities that
+      // use rowids for pagination.
+      if(pIdxInfo->nOrderBy == 1 && pIdxInfo->aOrderBy[0].iColumn == -1 && pIdxInfo->aOrderBy[0].desc == 0)
+        pIdxInfo->orderByConsumed = 1;
       for(int i = 0; i < pIdxInfo->nConstraint; i++) {
         if(pIdxInfo->aConstraint[i].usable) {
           j++;
