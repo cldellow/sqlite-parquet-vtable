@@ -1,6 +1,6 @@
 # sqlite-parquet-vtable
 
-A SQLite [virtual table](https://sqlite.org/vtab.html) extension to expose Parquet files as SQL tables.
+A SQLite [virtual table](https://sqlite.org/vtab.html) extension to expose Parquet files as SQL tables. You may also find [csv2parquet](https://github.com/cldellow/csv2parquet/) useful.
 
 ## Download
 
