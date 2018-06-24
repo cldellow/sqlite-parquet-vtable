@@ -117,7 +117,6 @@ public:
   // that matched this constraint.
   int rowGroupId;
   bool hadRows;
-  bool valid;
 };
 
 #endif
