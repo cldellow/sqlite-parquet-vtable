@@ -31,7 +31,7 @@ ZSTD_LIB = $(ZSTD)/lib/libzstd.a
 # Flags
 CC = g++
 CPUS:=$(shell nproc)
-CFLAGS = -I $(SQLITE) -O3 -std=c++11 -Wall -fPIC -g
+CFLAGS = -I $(SQLITE) -I $(PARQUET_CPP)/src -I $(ARROW)/cpp/src -O3 -std=c++11 -Wall -fPIC -g
 
 LDFLAGS = -O3 \
 	  -Wl,--whole-archive $(PARQUET_CPP_LIB) $(LZ4_LIB) $(ZSTD_LIB) $(THRIFT_LIB) $(SNAPPY_LIB) $(ARROW_LIB) \
