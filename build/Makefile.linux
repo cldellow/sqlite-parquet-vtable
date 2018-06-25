@@ -48,7 +48,7 @@ LIBS = $(ARROW_LIB) \
        $(ZLIB_LIB) \
        $(ZSTD_LIB)
 
-libparquet.so: $(OBJ) $(LIBS)
+libparquet.so: $(LIBS) $(OBJ)
 	$(CC) -shared -o $@ $(OBJ) $(LDFLAGS)
 
 parquet_filter.o:  $(VTABLE)/parquet_filter.cc $(VTABLE)/parquet_filter.h
