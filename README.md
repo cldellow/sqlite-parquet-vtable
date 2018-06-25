@@ -4,15 +4,37 @@ A SQLite [virtual table](https://sqlite.org/vtab.html) extension to expose Parqu
 
 This [blog post](https://cldellow.com/2018/06/22/sqlite-parquet-vtable.html) provides some context on why you might use this.
 
-## Download
+## Installing
+
+### Download
 
 You can fetch a version built for Ubuntu 16.04 at https://s3.amazonaws.com/cldellow/public/libparquet/libparquet.so.xz
+
+### Building
+
+```
+./make-linux
+```
+
+The first run will git clone a bunch of libraries, patch them to be statically linkable and build them.
+
+Subsequent builds will only build the parquet virtual table extension.
+
+#### Tests
+
+Run:
+
+```
+tests/create-queries-from-templates
+tests/test-all
+```
+
 
 ## Use
 
 ```
 $ sqlite/sqlite3
-sqlite> .load parquet/libparquet
+sqlite> .load build/linux/libparquet
 sqlite> CREATE VIRTUAL TABLE demo USING parquet('parquet-generator/99-rows-1.parquet');
 sqlite> SELECT * FROM demo;
 ...if all goes well, you'll see data here!...
@@ -21,7 +43,7 @@ sqlite> SELECT * FROM demo;
 Note: if you get an error like:
 
 ```
-sqlite> .load parquet/libparquet
+sqlite> .load build/linux/libparquet
 Error: parquet/libparquet.so: wrong ELF class: ELFCLASS64
 ```
 
@@ -89,26 +111,3 @@ These are not currently supported:
 
 * UINT8/UINT16/UINT32/UINT64
 * DECIMAL
-
-## Building
-
-If you're a masochist, you can try to build this yourself:
-
-1. Install [`parquet-cpp`](https://github.com/apache/parquet-cpp)
-    1. Master appears to be broken for text row group stats; see https://github.com/cldellow/sqlite-parquet-vtable/issues/5 for which versions to use
-2. Run `./build-sqlite` to fetch and build the SQLite dev bits
-3. Run `./parquet/make` to build the module
-    1. You will need to fixup the paths in this file to point at your local parquet-cpp folder.
-
-You're almost certainly going to regret your life. https://stackoverflow.com/questions/48157198/how-can-i-statically-link-arrow-when-building-parquet-cpp may be useful.
-
-## Tests
-
-Run:
-
-```
-tests/create-queries-from-templates
-tests/test-all
-```
-
-

@@ -9,7 +9,7 @@ load_supported() {
   basename=$(basename "$file")
   cat <<EOF
 .echo on
-.load parquet/libparquet
+.load build/linux/libparquet
 .testcase $basename
 .bail on
 CREATE VIRTUAL TABLE test USING parquet('$file');
@@ -23,7 +23,7 @@ main() {
   root=$(readlink -f "$root")
   cd "$root"
 
-  supported_files=$(find . -type f -name '*.parquet' -not -name 'unsupported*.parquet')
+  supported_files=$(find ./parquet-generator/ -type f -name '*.parquet' -not -name 'unsupported*.parquet')
   while read -r supported; do
     echo "Testing: $supported"
     if ! "$root"/sqlite/sqlite3 -init <(load_supported "$supported") < /dev/null > /dev/null 2> testcase-stderr.txt; then

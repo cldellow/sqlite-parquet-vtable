@@ -69,7 +69,7 @@ def test_statement(conn, table, column_values, all_values):
         rv = [row for row in conn.execute(new_query)]
         if gold != rv:
             with open('testcase-cmds.txt', 'w') as f:
-                f.write('.load parquet/libparquet\n.testcase query\n.bail on\n{};\n.output\n'.format(new_query))
+                f.write('.load build/linux/libparquet\n.testcase query\n.bail on\n{};\n.output\n'.format(new_query))
             with open('testcase-expected.txt', 'w') as f:
                 for row in gold:
                     f.write('{}\n'.format(row))
@@ -105,5 +105,5 @@ def test_db(db_file, extension_file, tables):
 
 if __name__ == '__main__':
     db_file = os.path.abspath(os.path.join(__file__, '..', '..', 'test.db'))
-    extension_file = os.path.abspath(os.path.join(__file__, '..', '..', 'parquet', 'libparquet.so'))
+    extension_file = os.path.abspath(os.path.join(__file__, '..', '..', 'build', 'linux', 'libparquet.so'))
     test_db(db_file, extension_file, ['nulls', 'no_nulls'])

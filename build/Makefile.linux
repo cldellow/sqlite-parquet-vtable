@@ -1,0 +1,141 @@
+HERE:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+ROOT:=$(HERE)/../..
+VTABLE:=$(ROOT)/parquet
+SQLITE:=$(ROOT)/sqlite
+
+# Directories
+ARROW=$(HERE)/arrow
+BROTLI=$(HERE)/brotli
+LZ4=$(HERE)/lz4
+PARQUET_CPP=$(HERE)/parquet-cpp
+SNAPPY=$(HERE)/snappy
+ZLIB=$(HERE)/zlib
+ZSTD=$(HERE)/zstd
+
+# Libraries
+ARROW_LIB = $(ARROW)/cpp/release/release/libarrow.a
+BOOST_FILESYSTEM_LIB = /usr/lib/x86_64-linux-gnu/libboost_filesystem.so
+BOOST_LIB = /usr/lib/x86_64-linux-gnu/libboost_regex.so
+BOOST_SYSTEM_LIB = /usr/lib/x86_64-linux-gnu/libboost_system.so
+BROTLI_COMMON_LIB = $(BROTLI)/out/libbrotlicommon-static.a
+BROTLI_DEC_LIB = $(BROTLI)/out/libbrotlidec-static.a
+BROTLI_ENC_LIB = $(BROTLI)/out/libbrotlienc-static.a
+LZ4_LIB = $(LZ4)/lib/liblz4.a
+PARQUET_CPP_LIB = $(PARQUET_CPP)/build/release/libparquet.a
+SNAPPY_LIB = $(SNAPPY)/build/libsnappy.a
+SQLITE3_LIB = $(SQLITE)/libsqlite3.a
+THRIFT_LIB = $(PARQUET_CPP)/thrift_ep/src/thrift_ep-install/lib/libthrift.a
+ZLIB_LIB = $(ZLIB)/libz.a
+ZSTD_LIB = $(ZSTD)/lib/libzstd.a
+
+# Flags
+CC = g++
+CPUS:=$(shell nproc)
+CFLAGS = -I $(SQLITE) -O3 -std=c++11 -Wall -fPIC -g
+
+LDFLAGS = -O3 \
+	  -Wl,--whole-archive $(PARQUET_CPP_LIB) $(LZ4_LIB) $(ZSTD_LIB) $(THRIFT_LIB) $(SNAPPY_LIB) $(ARROW_LIB) \
+	      $(BROTLI_ENC_LIB) $(BROTLI_COMMON_LIB) $(BROTLI_DEC_LIB) \
+	  -Wl,--no-whole-archive -lz -lcrypto -lssl $(BOOST_LIB) $(BOOST_SYSTEM_LIB) $(BOOST_FILESYSTEM_LIB)
+OBJ = parquet.o parquet_filter.o parquet_table.o parquet_cursor.o
+LIBS = $(ARROW_LIB) \
+       $(BROTLI_COMMON_LIB) \
+       $(BROTLI_DEC_LIB) \
+       $(BROTLI_ENC_LIB) \
+       $(LZ4_LIB) \
+       $(PARQUET_CPP_LIB) \
+       $(SNAPPY_LIB) \
+       $(ZLIB_LIB) \
+       $(ZSTD_LIB)
+
+libparquet.so: $(OBJ) $(LIBS)
+	$(CC) -shared -o $@ $(OBJ) $(LDFLAGS)
+
+parquet_filter.o:  $(VTABLE)/parquet_filter.cc $(VTABLE)/parquet_filter.h
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+parquet_cursor.o:  $(VTABLE)/parquet_cursor.cc $(VTABLE)/parquet_cursor.h $(VTABLE)/parquet_table.h $(VTABLE)/parquet_filter.h
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+parquet_table.o:  $(VTABLE)/parquet_table.cc $(VTABLE)/parquet_table.h
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+parquet.o: $(VTABLE)/parquet.cc $(VTABLE)/parquet_cursor.h $(VTABLE)/parquet_table.h $(VTABLE)/parquet_filter.h
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+$(ARROW_LIB):
+	rm -rf $(ARROW)
+	git clone https://github.com/apache/arrow.git $(ARROW)
+	cd $(ARROW) && git checkout apache-arrow-0.9.0
+	mkdir $(ARROW)/cpp/release
+	cd $(ARROW)/cpp/release && cmake .. -DCMAKE_BUILD_TYPE=Release
+	cd $(ARROW)/cpp/release && make -j$(CPUS) unittest
+
+$(BROTLI_COMMON_LIB):
+	rm -rf $(BROTLI)
+	git clone https://github.com/google/brotli.git $(BROTLI)
+	mkdir $(BROTLI)/out
+	cd $(BROTLI)/out && ../configure-cmake && make -j$(CPUS)
+
+$(LZ4_LIB):
+	rm -rf $(LZ4)
+	git clone https://github.com/lz4/lz4.git $(LZ4)
+	sed -i 's/^CFLAGS *+=/CFLAGS += -fPIC /' $(LZ4)/lib/Makefile
+	cd $(LZ4) && make -j$(CPUS)
+
+$(PARQUET_CPP_LIB): $(SNAPPY_LIB) $(BROTLI_COMMON_LIB) $(ZLIB_LIB) $(LZ4_LIB) $(ZSTD_LIB)
+	rm -rf $(PARQUET_CPP)
+	git clone https://github.com/apache/parquet-cpp.git $(PARQUET_CPP)
+	cd $(PARQUET_CPP) && git checkout apache-parquet-cpp-1.4.0
+	cd $(PARQUET_CPP) && SNAPPY_STATIC_LIB=$(SNAPPY_LIB) BROTLI_STATIC_LIB_ENC=$(BROTLI_ENC_LIB) BROTLI_STATIC_LIB_DEC=$(BROTLI_DEC_LIB) BROTLI_STATIC_LIB_COMMON=$(BROTLI_COMMON_LIB) ZLIB_STATIC_LIB=$(ZLIB_LIB) LZ4_STATIC_LIB=$(LZ4_LIB) ZSTD_STATIC_LIB=$(ZSTD_LIB) cmake -DCMAKE_BUILD_TYPE=Release -DPARQUET_MINIMAL_DEPENDENCY=ON -DPARQUET_ARROW_LINKAGE=static .
+	cd $(PARQUET_CPP) && make -j$(CPUS)
+
+$(SNAPPY_LIB):
+	rm -rf $(SNAPPY)
+	git clone https://github.com/google/snappy.git $(SNAPPY)
+	mkdir $(SNAPPY)/build
+	cd $(SNAPPY)/build && cmake .. 
+	sed -i '3iset(CMAKE_POSITION_INDEPENDENT_CODE ON)' $(SNAPPY)/CMakeLists.txt
+	cd $(SNAPPY)/build && make -j$(CPUS)
+
+$(SQLITE3_LIB):
+	cd $(ROOT) && ./build-sqlite
+
+$(ZLIB_LIB):
+	rm -rf $(ZLIB)
+	git clone https://github.com/madler/zlib.git $(ZLIB)
+	cd $(ZLIB) && ./configure
+	sed -i 's/^CFLAGS=-O3/CFLAGS=-fPIC -O3/' $(ZLIB)/Makefile
+	cd $(ZLIB) && make -j$(CPUS)
+
+$(ZSTD_LIB):
+	rm -rf $(ZSTD)
+	git clone https://github.com/facebook/zstd.git $(ZSTD)
+	sed -i 's/^CFLAGS *+=/CFLAGS += -fPIC /' $(ZSTD)/lib/Makefile
+	cd $(ZSTD) && make -j$(CPUS)
+
+.PHONY: clean parquet snappy brotli zlib lz4 zstd arrow
+
+clean:
+	rm -f *.o *.so
+
+distclean:
+	rm -rf $(SQLITE) $(HERE)
+
+
+arrow: $(ARROW_LIB)
+
+brotli: $(BROTLI_COMMON_LIB)
+
+lz4: $(LZ4_LIB)
+
+parquet: $(PARQUET_CPP_LIB)
+
+snappy: $(SNAPPY_LIB)
+
+sqlite: $(SQLITE3_LIB)
+
+zlib: $(ZLIB_LIB)
+
+zstd: $(ZSTD_LIB)
+

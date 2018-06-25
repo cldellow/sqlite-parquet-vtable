@@ -6,7 +6,7 @@ set -euo pipefail
 load_nonexistent() {
   cat <<EOF
 .echo on
-.load parquet/libparquet
+.load build/linux/libparquet
 .testcase notfound
 .bail on
 CREATE VIRTUAL TABLE test USING parquet('$root/doesnotexist.parquet');

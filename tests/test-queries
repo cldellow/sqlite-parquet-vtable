@@ -9,7 +9,7 @@ run_query() {
   query=${2:?must provide query to run}
   basename=$(basename "$file")
   cat <<EOF
-.load parquet/libparquet
+.load build/linux/libparquet
 .testcase $basename
 .bail on
 CREATE VIRTUAL TABLE IF NOT EXISTS nulls1 USING parquet('$root/parquet-generator/99-rows-nulls-1.parquet');

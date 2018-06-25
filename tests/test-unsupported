@@ -9,7 +9,7 @@ load_unsupported() {
   basename=$(basename "$file")
   cat <<EOF
 .echo on
-.load parquet/libparquet
+.load build/linux/libparquet
 .testcase $basename
 .bail on
 CREATE VIRTUAL TABLE test USING parquet('$file');
