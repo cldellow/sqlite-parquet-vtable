@@ -48,20 +48,24 @@ LDFLAGS = -O3 \
 OBJ = parquet.o parquet_filter.o parquet_table.o parquet_cursor.o
 LIBS = $(ARROW_LIB) $(PARQUET_CPP_LIB) $(ICU_I18N_LIB)
 
+PROF =
+#PROF = -fprofile-generate
+#PROF = -fprofile-use
+
 libparquet.so: $(LIBS) $(OBJ)
-	$(CC) -shared -o $@ $(OBJ) $(LDFLAGS)
+	$(CC) $(PROF) -shared -o $@ $(OBJ) $(LDFLAGS)
 
 parquet_filter.o:  $(VTABLE)/parquet_filter.cc $(VTABLE)/parquet_filter.h
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) $(PROF) -c -o $@ $< $(CFLAGS)
 
 parquet_cursor.o:  $(VTABLE)/parquet_cursor.cc $(VTABLE)/parquet_cursor.h $(VTABLE)/parquet_table.h $(VTABLE)/parquet_filter.h
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) $(PROF) -c -o $@ $< $(CFLAGS)
 
 parquet_table.o:  $(VTABLE)/parquet_table.cc $(VTABLE)/parquet_table.h
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) $(PROF) -c -o $@ $< $(CFLAGS)
 
 parquet.o: $(VTABLE)/parquet.cc $(VTABLE)/parquet_cursor.h $(VTABLE)/parquet_table.h $(VTABLE)/parquet_filter.h
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) $(PROF) -c -o $@ $< $(CFLAGS)
 
 $(ARROW_LIB):
 	rm -rf $(ARROW)
