@@ -21,4 +21,15 @@ sudo apt-get install cmake \
 if [ ! -e ../../sqlite/sqlite3 ]; then
   make sqlite
 fi
+
+if [ "$(lsb_release -s -r)" == "16.04" ]; then
+  export ICU_VERSION=55.1
+elif [ "$(lsb_release -s -r)" == "18.04" ]; then
+  export ICU_VERSION=60.2
+else
+  echo "unsure what libicu version to use" >&2
+  exit 1
+fi
+
+export ICU_VERSION_U=${ICU_VERSION//./_}
 make "$@"

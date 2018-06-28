@@ -73,15 +73,15 @@ $(ARROW_LIB):
 	git clone https://github.com/apache/arrow.git $(ARROW)
 	cd $(ARROW) && git checkout apache-arrow-0.9.0
 	mkdir $(ARROW)/cpp/release
-	cd $(ARROW)/cpp/release && cmake -DCMAKE_BUILD_TYPE=$(APACHE_BUILD) -DARROW_BOOST_VENDORED=ON -DARROW_BOOST_USE_SHARED=OFF ..
+	cd $(ARROW)/cpp/release && cmake -DCMAKE_BUILD_TYPE=$(APACHE_BUILD) -DARROW_BOOST_VENDORED=ON -DARROW_BOOST_USE_SHARED=OFF -DPARQUET_BUILD_SHARED=OFF ..
 	cd $(ARROW)/cpp/release && make -j$(CPUS) unittest
 
 # This is pretty gross. I'm sure someone who knows what they're doing could do this more cleanly.
 $(ICU_I18N_LIB):
 	rm -rf $(ICU)
 	mkdir $(ICU)
-	cd $(ICU) && wget http://download.icu-project.org/files/icu4c/55.1/icu4c-55_1-src.tgz
-	cd $(ICU) && tar xf icu4c-55_1-src.tgz --strip-components=1
+	cd $(ICU) && wget http://download.icu-project.org/files/icu4c/$(ICU_VERSION)/icu4c-$(ICU_VERSION_U)-src.tgz
+	cd $(ICU) && tar xf icu4c-$(ICU_VERSION_U)-src.tgz --strip-components=1
 	cd $(ICU)/source && ./configure --enable-static
 	cd $(ICU)/source && make -j$(CPUS) LIBCFLAGS='-fPIC' LIBCXXFLAGS='-fPIC'
 
@@ -89,7 +89,7 @@ $(PARQUET_CPP_LIB): $(ARROW_LIB)
 	rm -rf $(PARQUET_CPP)
 	git clone https://github.com/apache/parquet-cpp.git $(PARQUET_CPP)
 	cd $(PARQUET_CPP) && git checkout apache-parquet-cpp-1.4.0
-	cd $(PARQUET_CPP) && BOOST_ROOT=$(BOOST_ROOT) BOOST_STATIC_REGEX_LIBRARY=$(BOOST_REGEX_LIB) SNAPPY_STATIC_LIB=$(SNAPPY_LIB) BROTLI_STATIC_LIB_ENC=$(BROTLI_ENC_LIB) BROTLI_STATIC_LIB_DEC=$(BROTLI_DEC_LIB) BROTLI_STATIC_LIB_COMMON=$(BROTLI_COMMON_LIB) ZLIB_STATIC_LIB=$(ZLIB_LIB) LZ4_STATIC_LIB=$(LZ4_LIB) ZSTD_STATIC_LIB=$(ZSTD_LIB) cmake -DCMAKE_BUILD_TYPE=$(APACHE_BUILD) -DPARQUET_MINIMAL_DEPENDENCY=ON -DPARQUET_ARROW_LINKAGE=static -DPARQUET_BOOST_USE_SHARED=OFF .
+	cd $(PARQUET_CPP) && BOOST_ROOT=$(BOOST_ROOT) BOOST_STATIC_REGEX_LIBRARY=$(BOOST_REGEX_LIB) SNAPPY_STATIC_LIB=$(SNAPPY_LIB) BROTLI_STATIC_LIB_ENC=$(BROTLI_ENC_LIB) BROTLI_STATIC_LIB_DEC=$(BROTLI_DEC_LIB) BROTLI_STATIC_LIB_COMMON=$(BROTLI_COMMON_LIB) ZLIB_STATIC_LIB=$(ZLIB_LIB) LZ4_STATIC_LIB=$(LZ4_LIB) ZSTD_STATIC_LIB=$(ZSTD_LIB) cmake -DCMAKE_BUILD_TYPE=$(APACHE_BUILD) -DPARQUET_MINIMAL_DEPENDENCY=ON -DPARQUET_ARROW_LINKAGE=static -DPARQUET_BOOST_USE_SHARED=OFF -DPARQUET_BUILD_SHARED=OFF .
 	cd $(PARQUET_CPP) && make -j$(CPUS)
 
 $(SQLITE3_LIB):
