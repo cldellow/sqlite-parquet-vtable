@@ -17,7 +17,10 @@ ZLIB=$(ARROW_RELEASE)/zlib_ep/src/zlib_ep-install/lib
 ZSTD=$(ARROW_RELEASE)/zstd_ep-prefix/src/zstd_ep/lib
 
 # Libraries
-ARROW_LIB = $(ARROW_RELEASE)/release/libarrow.a
+# profile_gen, profile_build for PGO
+APACHE_BUILD=release
+
+ARROW_LIB = $(ARROW_RELEASE)/$(APACHE_BUILD)/libarrow.a
 BOOST_FILESYSTEM_LIB = $(BOOST)/libboost_filesystem.a
 BOOST_REGEX_LIB = $(BOOST)/libboost_regex.a
 BOOST_SYSTEM_LIB = $(BOOST)/libboost_system.a
@@ -28,7 +31,7 @@ ICU_I18N_LIB=$(ICU)/source/lib/libicui18n.a
 ICU_UC_LIB=$(ICU)/source/lib/libicuuc.a
 ICU_DATA_LIB=$(ICU)/source/lib/libicudata.a
 LZ4_LIB = $(LZ4)/liblz4.a
-PARQUET_CPP_LIB = $(PARQUET_CPP)/build/release/libparquet.a
+PARQUET_CPP_LIB = $(PARQUET_CPP)/build/$(APACHE_BUILD)/libparquet.a
 SNAPPY_LIB = $(SNAPPY)/libsnappy.a
 SQLITE3_LIB = $(SQLITE)/libsqlite3.a
 THRIFT_LIB = $(PARQUET_CPP)/thrift_ep/src/thrift_ep-install/lib/libthrift.a
@@ -49,8 +52,6 @@ OBJ = parquet.o parquet_filter.o parquet_table.o parquet_cursor.o
 LIBS = $(ARROW_LIB) $(PARQUET_CPP_LIB) $(ICU_I18N_LIB)
 
 PROF =
-#PROF = -fprofile-generate
-#PROF = -fprofile-use
 
 libparquet.so: $(LIBS) $(OBJ)
 	$(CC) $(PROF) -shared -o $@ $(OBJ) $(LDFLAGS)
@@ -72,7 +73,7 @@ $(ARROW_LIB):
 	git clone https://github.com/apache/arrow.git $(ARROW)
 	cd $(ARROW) && git checkout apache-arrow-0.9.0
 	mkdir $(ARROW)/cpp/release
-	cd $(ARROW)/cpp/release && cmake -DCMAKE_BUILD_TYPE=Release -DARROW_BOOST_VENDORED=ON -DARROW_BOOST_USE_SHARED=OFF ..
+	cd $(ARROW)/cpp/release && cmake -DCMAKE_BUILD_TYPE=$(APACHE_BUILD) -DARROW_BOOST_VENDORED=ON -DARROW_BOOST_USE_SHARED=OFF ..
 	cd $(ARROW)/cpp/release && make -j$(CPUS) unittest
 
 # This is pretty gross. I'm sure someone who knows what they're doing could do this more cleanly.
@@ -88,7 +89,7 @@ $(PARQUET_CPP_LIB): $(ARROW_LIB)
 	rm -rf $(PARQUET_CPP)
 	git clone https://github.com/apache/parquet-cpp.git $(PARQUET_CPP)
 	cd $(PARQUET_CPP) && git checkout apache-parquet-cpp-1.4.0
-	cd $(PARQUET_CPP) && BOOST_ROOT=$(BOOST_ROOT) BOOST_STATIC_REGEX_LIBRARY=$(BOOST_REGEX_LIB) SNAPPY_STATIC_LIB=$(SNAPPY_LIB) BROTLI_STATIC_LIB_ENC=$(BROTLI_ENC_LIB) BROTLI_STATIC_LIB_DEC=$(BROTLI_DEC_LIB) BROTLI_STATIC_LIB_COMMON=$(BROTLI_COMMON_LIB) ZLIB_STATIC_LIB=$(ZLIB_LIB) LZ4_STATIC_LIB=$(LZ4_LIB) ZSTD_STATIC_LIB=$(ZSTD_LIB) cmake -DCMAKE_BUILD_TYPE=Release -DPARQUET_MINIMAL_DEPENDENCY=ON -DPARQUET_ARROW_LINKAGE=static -DPARQUET_BOOST_USE_SHARED=OFF .
+	cd $(PARQUET_CPP) && BOOST_ROOT=$(BOOST_ROOT) BOOST_STATIC_REGEX_LIBRARY=$(BOOST_REGEX_LIB) SNAPPY_STATIC_LIB=$(SNAPPY_LIB) BROTLI_STATIC_LIB_ENC=$(BROTLI_ENC_LIB) BROTLI_STATIC_LIB_DEC=$(BROTLI_DEC_LIB) BROTLI_STATIC_LIB_COMMON=$(BROTLI_COMMON_LIB) ZLIB_STATIC_LIB=$(ZLIB_LIB) LZ4_STATIC_LIB=$(LZ4_LIB) ZSTD_STATIC_LIB=$(ZSTD_LIB) cmake -DCMAKE_BUILD_TYPE=$(APACHE_BUILD) -DPARQUET_MINIMAL_DEPENDENCY=ON -DPARQUET_ARROW_LINKAGE=static -DPARQUET_BOOST_USE_SHARED=OFF .
 	cd $(PARQUET_CPP) && make -j$(CPUS)
 
 $(SQLITE3_LIB):

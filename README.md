@@ -20,6 +20,10 @@ The first run will git clone a bunch of libraries, patch them to be statically l
 
 Subsequent builds will only build the parquet virtual table extension.
 
+### Building (release)
+
+Run `./make-linx-pgo` to build an instrumented binary, run tests to collect real-life usage samples, then build an optimized binary. PGO seems to give a 5-10% reduction in query times.
+
 #### Tests
 
 Run:
