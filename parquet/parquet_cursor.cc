@@ -124,7 +124,6 @@ bool ParquetCursor::currentRowGroupSatisfiesBlobFilter(Constraint& constraint, s
           &blob[0],
           &blob[0] + blob.size());
     }
-    case IsNot:
     case NotEqual:
     {
       // If min == max == blob, we can skip this.
@@ -132,6 +131,7 @@ bool ParquetCursor::currentRowGroupSatisfiesBlobFilter(Constraint& constraint, s
       bool minMaxEqual = minLen == maxLen && memcmp(minPtr, maxPtr, minLen) == 0;
       return !(blobMaxEqual && minMaxEqual);
     }
+    case IsNot:
     default:
       return true;
   }
@@ -168,7 +168,6 @@ bool ParquetCursor::currentRowGroupSatisfiesTextFilter(Constraint& constraint, s
       return minStr < str;
     case LessThanOrEqual:
       return minStr <= str;
-    case IsNot:
     case NotEqual:
       // If min == max == str, we can skip this.
       return !(minStr == maxStr && str == minStr);
@@ -179,6 +178,7 @@ bool ParquetCursor::currentRowGroupSatisfiesTextFilter(Constraint& constraint, s
       std::string truncatedMax = maxStr.substr(0, likeStringValue.size());
       return likeStringValue.empty() || (likeStringValue >= truncatedMin && likeStringValue <= truncatedMax);
     }
+    case IsNot:
     default:
       return true;
   }
@@ -260,11 +260,11 @@ bool ParquetCursor::currentRowGroupSatisfiesIntegerFilter(Constraint& constraint
       return min < value;
     case LessThanOrEqual:
       return min <= value;
-    case IsNot:
     case NotEqual:
       // If min == max == str, we can skip this.
       return !(min == max && value == min);
     case Like:
+    case IsNot:
     default:
       return true;
   }
@@ -323,11 +323,11 @@ bool ParquetCursor::currentRowGroupSatisfiesDoubleFilter(Constraint& constraint,
       return min < value;
     case LessThanOrEqual:
       return min <= value;
-    case IsNot:
     case NotEqual:
       // If min == max == str, we can skip this.
       return !(min == max && value == min);
     case Like:
+    case IsNot:
     default:
       return true;
   }
@@ -354,7 +354,6 @@ bool ParquetCursor::currentRowSatisfiesTextFilter(Constraint& constraint) {
 
       return 0 == memcmp(&blob[0], ba->ptr, ba->len);
     }
-    case IsNot:
     case NotEqual:
     {
       const std::vector<unsigned char>& blob = constraint.blobValue;
@@ -419,6 +418,7 @@ bool ParquetCursor::currentRowSatisfiesTextFilter(Constraint& constraint) {
         len = likeStringValue.size();
       return 0 == memcmp(&likeStringValue[0], ba->ptr, len);
     }
+    case IsNot:
     default:
       return true;
   }
@@ -458,7 +458,6 @@ bool ParquetCursor::currentRowSatisfiesIntegerFilter(Constraint& constraint) {
     case Is:
     case Equal:
       return constraintValue == value;
-    case IsNot:
     case NotEqual:
       return constraintValue != value;
     case GreaterThan:
@@ -470,6 +469,7 @@ bool ParquetCursor::currentRowSatisfiesIntegerFilter(Constraint& constraint) {
     case LessThanOrEqual:
       return value <= constraintValue;
     case Like:
+    case IsNot:
     default:
       return true;
   }
@@ -490,7 +490,6 @@ bool ParquetCursor::currentRowSatisfiesDoubleFilter(Constraint& constraint) {
     case Is:
     case Equal:
       return constraintValue == value;
-    case IsNot:
     case NotEqual:
       return constraintValue != value;
     case GreaterThan:
@@ -502,6 +501,7 @@ bool ParquetCursor::currentRowSatisfiesDoubleFilter(Constraint& constraint) {
     case LessThanOrEqual:
       return value <= constraintValue;
     case Like:
+    case IsNot:
     default:
       return true;
   }
