@@ -24,7 +24,7 @@ Subsequent builds will only build the parquet virtual table extension.
 
 Run `./make-linx-pgo` to build an instrumented binary, run tests to collect real-life usage samples, then build an optimized binary. PGO seems to give a 5-10% reduction in query times.
 
-#### Tests
+### Tests
 
 Run:
 
