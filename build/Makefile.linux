@@ -58,16 +58,16 @@ PROF =
 libparquet.so: $(LIBS) $(OBJ)
 	$(CC) $(PROF) -shared -o $@ $(OBJ) $(LDFLAGS)
 
-parquet_filter.o:  $(ARROW) $(PARQUET_CPP) $(VTABLE)/parquet_filter.cc $(VTABLE)/parquet_filter.h
+parquet_filter.o: $(VTABLE)/parquet_filter.cc $(VTABLE)/parquet_filter.h $(ARROW) $(PARQUET_CPP)
 	$(CC) $(PROF) -c -o $@ $< $(CFLAGS)
 
-parquet_cursor.o:  $(ARROW) $(PARQUET_CPP) $(VTABLE)/parquet_cursor.cc $(VTABLE)/parquet_cursor.h $(VTABLE)/parquet_table.h $(VTABLE)/parquet_filter.h
+parquet_cursor.o: $(VTABLE)/parquet_cursor.cc $(VTABLE)/parquet_cursor.h $(VTABLE)/parquet_table.h $(VTABLE)/parquet_filter.h $(ARROW) $(PARQUET_CPP)
 	$(CC) $(PROF) -c -o $@ $< $(CFLAGS)
 
-parquet_table.o:  $(ARROW) $(PARQUET_CPP) $(VTABLE)/parquet_table.cc $(VTABLE)/parquet_table.h
+parquet_table.o: $(VTABLE)/parquet_table.cc $(VTABLE)/parquet_table.h $(ARROW) $(PARQUET_CPP)
 	$(CC) $(PROF) -c -o $@ $< $(CFLAGS)
 
-parquet.o: $(ARROW) $(PARQUET_CPP) $(VTABLE)/parquet.cc $(VTABLE)/parquet_cursor.h $(VTABLE)/parquet_table.h $(VTABLE)/parquet_filter.h
+parquet.o: $(VTABLE)/parquet.cc $(VTABLE)/parquet_cursor.h $(VTABLE)/parquet_table.h $(VTABLE)/parquet_filter.h $(ARROW) $(PARQUET_CPP)
 	$(CC) $(PROF) -c -o $@ $< $(CFLAGS)
 
 $(ARROW):
