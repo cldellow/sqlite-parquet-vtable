@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-VERSION=3220000
+VERSION=3240000
 
 fetch_if_needed() {
   if [ ! -e sqlite ]; then
