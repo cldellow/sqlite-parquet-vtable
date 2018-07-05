@@ -43,10 +43,12 @@ CC = g++
 CPUS:=$(shell nproc)
 CFLAGS = -I $(SQLITE) -I $(PARQUET_CPP)/src -I $(ARROW)/cpp/src -O3 -std=c++11 -Wall -fPIC -g
 
+ALL_LIBS = $(PARQUET_CPP_LIB) $(LZ4_LIB) $(ZSTD_LIB) $(THRIFT_LIB) $(SNAPPY_LIB) $(ARROW_LIB) \
+	  $(ICU_I18N_LIB) $(ICU_UC_LIB) $(ICU_DATA_LIB) \
+	  $(BROTLI_ENC_LIB) $(BROTLI_COMMON_LIB) $(BROTLI_DEC_LIB) $(BOOST_REGEX_LIB) $(BOOST_SYSTEM_LIB) $(BOOST_FILESYSTEM_LIB)
+
 LDFLAGS = -O3 \
-	  -Wl,--whole-archive $(PARQUET_CPP_LIB) $(LZ4_LIB) $(ZSTD_LIB) $(THRIFT_LIB) $(SNAPPY_LIB) $(ARROW_LIB) \
-	      $(ICU_I18N_LIB) $(ICU_UC_LIB) $(ICU_DATA_LIB) \
-	      $(BROTLI_ENC_LIB) $(BROTLI_COMMON_LIB) $(BROTLI_DEC_LIB) $(BOOST_REGEX_LIB) $(BOOST_SYSTEM_LIB) $(BOOST_FILESYSTEM_LIB) \
+	  -Wl,--whole-archive $(ALL_LIBS) \
 	  -Wl,--no-whole-archive -lz -lcrypto -lssl
 OBJ = parquet.o parquet_filter.o parquet_table.o parquet_cursor.o
 LIBS = $(ARROW_LIB) $(PARQUET_CPP_LIB) $(ICU_I18N_LIB)
@@ -95,7 +97,7 @@ $(PARQUET_CPP_LIB): $(ARROW_LIB)
 $(SQLITE3_LIB):
 	cd $(ROOT) && ./build-sqlite
 
-.PHONY: clean arrow icu parquet sqlite
+.PHONY: clean arrow icu parquet publish_libs sqlite
 
 clean:
 	rm -f *.o *.so
@@ -109,5 +111,10 @@ arrow: $(ARROW_LIB)
 icu: $(ICU_I18N_LIB)
 
 parquet: $(PARQUET_CPP_LIB)
+
+publish_libs:
+	for lib in $(ALL_LIBS); do \
+		s3cmd put $$lib s3://cldellow/public/libparquet/$$(lsb_release -s -r)/; \
+	done
 
 sqlite: $(SQLITE3_LIB)
