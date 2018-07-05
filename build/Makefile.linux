@@ -74,7 +74,7 @@ $(ARROW_LIB):
 	cd $(ARROW) && git checkout apache-arrow-0.9.0
 	mkdir $(ARROW)/cpp/release
 	cd $(ARROW)/cpp/release && cmake -DCMAKE_BUILD_TYPE=$(APACHE_BUILD) -DARROW_BOOST_VENDORED=ON -DARROW_BOOST_USE_SHARED=OFF -DPARQUET_BUILD_SHARED=OFF ..
-	cd $(ARROW)/cpp/release && make -j$(CPUS) unittest
+	cd $(ARROW)/cpp/release && make -j$(CPUS)
 
 # This is pretty gross. I'm sure someone who knows what they're doing could do this more cleanly.
 $(ICU_I18N_LIB):
