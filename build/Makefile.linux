@@ -58,22 +58,24 @@ PROF =
 libparquet.so: $(LIBS) $(OBJ)
 	$(CC) $(PROF) -shared -o $@ $(OBJ) $(LDFLAGS)
 
-parquet_filter.o:  $(VTABLE)/parquet_filter.cc $(VTABLE)/parquet_filter.h
+parquet_filter.o:  $(ARROW) $(PARQUET_CPP) $(VTABLE)/parquet_filter.cc $(VTABLE)/parquet_filter.h
 	$(CC) $(PROF) -c -o $@ $< $(CFLAGS)
 
-parquet_cursor.o:  $(VTABLE)/parquet_cursor.cc $(VTABLE)/parquet_cursor.h $(VTABLE)/parquet_table.h $(VTABLE)/parquet_filter.h
+parquet_cursor.o:  $(ARROW) $(PARQUET_CPP) $(VTABLE)/parquet_cursor.cc $(VTABLE)/parquet_cursor.h $(VTABLE)/parquet_table.h $(VTABLE)/parquet_filter.h
 	$(CC) $(PROF) -c -o $@ $< $(CFLAGS)
 
-parquet_table.o:  $(VTABLE)/parquet_table.cc $(VTABLE)/parquet_table.h
+parquet_table.o:  $(ARROW) $(PARQUET_CPP) $(VTABLE)/parquet_table.cc $(VTABLE)/parquet_table.h
 	$(CC) $(PROF) -c -o $@ $< $(CFLAGS)
 
-parquet.o: $(VTABLE)/parquet.cc $(VTABLE)/parquet_cursor.h $(VTABLE)/parquet_table.h $(VTABLE)/parquet_filter.h
+parquet.o: $(ARROW) $(PARQUET_CPP) $(VTABLE)/parquet.cc $(VTABLE)/parquet_cursor.h $(VTABLE)/parquet_table.h $(VTABLE)/parquet_filter.h
 	$(CC) $(PROF) -c -o $@ $< $(CFLAGS)
 
-$(ARROW_LIB):
+$(ARROW):
 	rm -rf $(ARROW)
 	git clone https://github.com/apache/arrow.git $(ARROW)
 	cd $(ARROW) && git checkout apache-arrow-0.9.0
+
+$(ARROW_LIB): $(ARROW)
 	mkdir $(ARROW)/cpp/release
 	cd $(ARROW)/cpp/release && cmake -DCMAKE_BUILD_TYPE=$(APACHE_BUILD) -DARROW_BOOST_VENDORED=ON -DARROW_BOOST_USE_SHARED=OFF -DPARQUET_BUILD_SHARED=OFF ..
 	cd $(ARROW)/cpp/release && make -j$(CPUS)
@@ -87,10 +89,12 @@ $(ICU_I18N_LIB):
 	cd $(ICU)/source && ./configure --enable-static
 	cd $(ICU)/source && make -j$(CPUS) LIBCFLAGS='-fPIC' LIBCXXFLAGS='-fPIC'
 
-$(PARQUET_CPP_LIB): $(ARROW_LIB)
+$(PARQUET_CPP):
 	rm -rf $(PARQUET_CPP)
 	git clone https://github.com/apache/parquet-cpp.git $(PARQUET_CPP)
 	cd $(PARQUET_CPP) && git checkout apache-parquet-cpp-1.4.0
+
+$(PARQUET_CPP_LIB): $(PARQUET_CPP) $(ARROW_LIB)
 	cd $(PARQUET_CPP) && BOOST_ROOT=$(BOOST_ROOT) BOOST_STATIC_REGEX_LIBRARY=$(BOOST_REGEX_LIB) SNAPPY_STATIC_LIB=$(SNAPPY_LIB) BROTLI_STATIC_LIB_ENC=$(BROTLI_ENC_LIB) BROTLI_STATIC_LIB_DEC=$(BROTLI_DEC_LIB) BROTLI_STATIC_LIB_COMMON=$(BROTLI_COMMON_LIB) ZLIB_STATIC_LIB=$(ZLIB_LIB) LZ4_STATIC_LIB=$(LZ4_LIB) ZSTD_STATIC_LIB=$(ZSTD_LIB) cmake -DCMAKE_BUILD_TYPE=$(APACHE_BUILD) -DPARQUET_MINIMAL_DEPENDENCY=ON -DPARQUET_ARROW_LINKAGE=static -DPARQUET_BOOST_USE_SHARED=OFF -DPARQUET_BUILD_SHARED=OFF .
 	cd $(PARQUET_CPP) && make -j$(CPUS)
 
