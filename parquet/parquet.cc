@@ -238,40 +238,6 @@ static int parquetOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor){
   }
 }
 
-const char* opName(int op) {
-  switch(op) {
-    case SQLITE_INDEX_CONSTRAINT_EQ:
-      return "=";
-    case SQLITE_INDEX_CONSTRAINT_GT:
-      return ">";
-    case SQLITE_INDEX_CONSTRAINT_LE:
-      return "<=";
-    case SQLITE_INDEX_CONSTRAINT_LT:
-      return "<";
-    case SQLITE_INDEX_CONSTRAINT_GE:
-      return ">=";
-    case SQLITE_INDEX_CONSTRAINT_MATCH:
-      return "match";
-    case SQLITE_INDEX_CONSTRAINT_LIKE:
-      return "LIKE";
-    case SQLITE_INDEX_CONSTRAINT_GLOB:
-      return "GLOB";
-    case SQLITE_INDEX_CONSTRAINT_REGEXP:
-      return "REGEXP";
-    case SQLITE_INDEX_CONSTRAINT_NE:
-      return "!=";
-    case SQLITE_INDEX_CONSTRAINT_ISNOT:
-      return "IS NOT";
-    case SQLITE_INDEX_CONSTRAINT_ISNOTNULL:
-      return "IS NOT NULL";
-    case SQLITE_INDEX_CONSTRAINT_ISNULL:
-      return "IS NULL";
-    case SQLITE_INDEX_CONSTRAINT_IS:
-      return "IS";
-    default:
-      return "unknown";
-  }
-}
 
 /*
 ** Advance a sqlite3_vtab_cursor_parquet to its next row of input.
@@ -389,6 +355,42 @@ static int parquetEof(sqlite3_vtab_cursor *cur){
   return 0;
 }
 
+#ifdef DEBUG
+const char* opName(int op) {
+  switch(op) {
+    case SQLITE_INDEX_CONSTRAINT_EQ:
+      return "=";
+    case SQLITE_INDEX_CONSTRAINT_GT:
+      return ">";
+    case SQLITE_INDEX_CONSTRAINT_LE:
+      return "<=";
+    case SQLITE_INDEX_CONSTRAINT_LT:
+      return "<";
+    case SQLITE_INDEX_CONSTRAINT_GE:
+      return ">=";
+    case SQLITE_INDEX_CONSTRAINT_MATCH:
+      return "match";
+    case SQLITE_INDEX_CONSTRAINT_LIKE:
+      return "LIKE";
+    case SQLITE_INDEX_CONSTRAINT_GLOB:
+      return "GLOB";
+    case SQLITE_INDEX_CONSTRAINT_REGEXP:
+      return "REGEXP";
+    case SQLITE_INDEX_CONSTRAINT_NE:
+      return "!=";
+    case SQLITE_INDEX_CONSTRAINT_ISNOT:
+      return "IS NOT";
+    case SQLITE_INDEX_CONSTRAINT_ISNOTNULL:
+      return "IS NOT NULL";
+    case SQLITE_INDEX_CONSTRAINT_ISNULL:
+      return "IS NULL";
+    case SQLITE_INDEX_CONSTRAINT_IS:
+      return "IS";
+    default:
+      return "unknown";
+  }
+}
+
 void debugConstraints(sqlite3_index_info *pIdxInfo, ParquetTable *table, int argc, sqlite3_value** argv) {
   printf("debugConstraints, argc=%d\n", argc);
   int j = 0;
@@ -445,6 +447,7 @@ void debugConstraints(sqlite3_index_info *pIdxInfo, ParquetTable *table, int arg
         pIdxInfo->aConstraint[i].usable);
   }
 }
+#endif
 
 ConstraintOperator constraintOperatorFromSqlite(int op) {
   switch(op) {
