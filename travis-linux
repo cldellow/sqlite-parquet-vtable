@@ -1,0 +1,4 @@
+#!/bin/bash
+set -euo pipefail
+
+PREBUILT=1 ./make-linux
