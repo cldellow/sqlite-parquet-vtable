@@ -28,7 +28,7 @@ def make_99_rows():
         row.append(bytes(ba_variable)), # BYTE_ARRAY
         row.append(bytes(ba_fixed)) # FIXED_LENGTH_BYTE_ARRAY
 # pyarrow does not support float yet :(
-#        row.append(1.0 / (i + 1)) # FLOAT
+        row.append(1.0 / (i + 1)) # FLOAT
 
         rows.append(row)
     return rows
@@ -46,8 +46,8 @@ def get_99_rows_types():
         pa.string(),
         pa.string(),
         pa.binary(-1),
-        pa.binary(1)
-#        pa.float32()
+        pa.binary(1),
+        pa.float32()
     ]
 
 def name_of(type, i):
@@ -148,6 +148,8 @@ def type_of(type):
         return 'BLOB'
     elif type == pa.binary(1):
         return 'BLOB'
+    elif type == pa.float32():
+        return 'DOUBLE'
     else:
         raise ValueError('unknown type: {}'.format(type))
 

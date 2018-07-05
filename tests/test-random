@@ -84,7 +84,9 @@ def test_statement(conn, table, column_values, all_values):
 
 
 def test_table(conn, table):
-    column_names = get_columns(conn, table)
+    # Don't include the floating point columns in random tests - sqlite itself stores doubles, so
+    # it can't act as an oracle for the FP stuff.
+    column_names = [x for x in get_columns(conn, table) if not x.startswith('float_')]
     print('Table {}: {}'.format(table, column_names))
     column_values = {}
     for name in column_names:
@@ -94,7 +96,6 @@ def test_table(conn, table):
     all_values = []
     for values in column_values.values():
         all_values = all_values + values
-    print(all_values)
     for i in range(1000):
         test_statement(conn, table, column_values, all_values)
 
