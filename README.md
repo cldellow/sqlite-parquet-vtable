@@ -1,5 +1,7 @@
 # sqlite-parquet-vtable
 
+[![Build Status](https://travis-ci.org/cldellow/sqlite-parquet-vtable.svg?branch=master)](https://travis-ci.org/cldellow/sqlite-parquet-vtable)
+
 A SQLite [virtual table](https://sqlite.org/vtab.html) extension to expose Parquet files as SQL tables. You may also find [csv2parquet](https://github.com/cldellow/csv2parquet/) useful.
 
 This [blog post](https://cldellow.com/2018/06/22/sqlite-parquet-vtable.html) provides some context on why you might use this.
