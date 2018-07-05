@@ -94,6 +94,7 @@ def test_table(conn, table):
     all_values = []
     for values in column_values.values():
         all_values = all_values + values
+    print(all_values)
     for i in range(1000):
         test_statement(conn, table, column_values, all_values)
 
@@ -107,5 +108,5 @@ def test_db(db_file, extension_file, tables):
 
 if __name__ == '__main__':
     db_file = os.path.abspath(os.path.join(__file__, '..', '..', 'test.db'))
-    extension_file = os.path.abspath(os.path.join(__file__, '..', '..', 'build', 'linux', 'libparquet.so'))
+    extension_file = os.path.abspath(os.path.join(__file__, '..', '..', 'build', 'linux', 'libparquet'))
     test_db(db_file, extension_file, ['nulls', 'no_nulls'])
