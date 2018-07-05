@@ -27,7 +27,6 @@ def make_99_rows():
         row.append('{:03}'.format(i)), # BYTE_ARRAY/UTF8
         row.append(bytes(ba_variable)), # BYTE_ARRAY
         row.append(bytes(ba_fixed)) # FIXED_LENGTH_BYTE_ARRAY
-# pyarrow does not support float yet :(
         row.append(1.0 / (i + 1)) # FLOAT
 
         rows.append(row)
