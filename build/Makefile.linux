@@ -39,7 +39,8 @@ ZLIB_LIB = $(ZLIB)/libz.a
 ZSTD_LIB = $(ZSTD)/libzstd.a
 
 # Flags
-CC = g++
+CC = gcc
+CXX = g++
 CPUS:=$(shell nproc)
 CFLAGS = -I $(SQLITE) -I $(PARQUET_CPP)/src -I $(ARROW)/cpp/src -O3 -std=c++11 -Wall -fPIC -g
 
@@ -56,19 +57,19 @@ LIBS = $(ARROW_LIB) $(PARQUET_CPP_LIB) $(ICU_I18N_LIB)
 PROF =
 
 libparquet.so: $(LIBS) $(OBJ)
-	$(CC) $(PROF) -shared -o $@ $(OBJ) $(LDFLAGS)
+	$(CXX) $(PROF) -shared -o $@ $(OBJ) $(LDFLAGS)
 
 parquet_filter.o: $(VTABLE)/parquet_filter.cc $(VTABLE)/parquet_filter.h $(ARROW) $(PARQUET_CPP)
-	$(CC) $(PROF) -c -o $@ $< $(CFLAGS)
+	$(CXX) $(PROF) -c -o $@ $< $(CFLAGS)
 
 parquet_cursor.o: $(VTABLE)/parquet_cursor.cc $(VTABLE)/parquet_cursor.h $(VTABLE)/parquet_table.h $(VTABLE)/parquet_filter.h $(ARROW) $(PARQUET_CPP)
-	$(CC) $(PROF) -c -o $@ $< $(CFLAGS)
+	$(CXX) $(PROF) -c -o $@ $< $(CFLAGS)
 
 parquet_table.o: $(VTABLE)/parquet_table.cc $(VTABLE)/parquet_table.h $(ARROW) $(PARQUET_CPP)
-	$(CC) $(PROF) -c -o $@ $< $(CFLAGS)
+	$(CXX) $(PROF) -c -o $@ $< $(CFLAGS)
 
 parquet.o: $(VTABLE)/parquet.cc $(VTABLE)/parquet_cursor.h $(VTABLE)/parquet_table.h $(VTABLE)/parquet_filter.h $(ARROW) $(PARQUET_CPP)
-	$(CC) $(PROF) -c -o $@ $< $(CFLAGS)
+	$(CXX) $(PROF) -c -o $@ $< $(CFLAGS)
 
 $(ARROW):
 	rm -rf $(ARROW)
