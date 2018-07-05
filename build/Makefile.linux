@@ -41,14 +41,15 @@ ZSTD_LIB = $(ZSTD)/libzstd.a
 # Flags
 CC = gcc
 CXX = g++
+OPTIMIZATIONS = -O3
 CPUS:=$(shell nproc)
-CFLAGS = -I $(SQLITE) -I $(PARQUET_CPP)/src -I $(ARROW)/cpp/src -O3 -std=c++11 -Wall -fPIC -g
+CFLAGS = -I $(SQLITE) -I $(PARQUET_CPP)/src -I $(ARROW)/cpp/src $(OPTIMIZATIONS) -std=c++11 -Wall -fPIC -g
 
 ALL_LIBS = $(PARQUET_CPP_LIB) $(LZ4_LIB) $(ZSTD_LIB) $(THRIFT_LIB) $(SNAPPY_LIB) $(ARROW_LIB) \
 	  $(ICU_I18N_LIB) $(ICU_UC_LIB) $(ICU_DATA_LIB) \
 	  $(BROTLI_ENC_LIB) $(BROTLI_COMMON_LIB) $(BROTLI_DEC_LIB) $(BOOST_REGEX_LIB) $(BOOST_SYSTEM_LIB) $(BOOST_FILESYSTEM_LIB)
 
-LDFLAGS = -O3 \
+LDFLAGS = $(OPTIMIZATIONS) \
 	  -Wl,--whole-archive $(ALL_LIBS) \
 	  -Wl,--no-whole-archive -lz -lcrypto -lssl
 OBJ = parquet.o parquet_filter.o parquet_table.o parquet_cursor.o

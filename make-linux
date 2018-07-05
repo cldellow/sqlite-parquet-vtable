@@ -95,7 +95,13 @@ main() {
   if [ -v PREBUILT ]; then
     fetch_prebuilt_libs
   fi
-  make ${lib_locs[@]-} "$@"
+
+  optimizations="-O3"
+  if [ -v COVERAGE ]; then
+    optimizations="-fprofile-arcs -ftest-coverage"
+  fi
+
+  make ${lib_locs[@]-} "$@" OPTIMIZATIONS="$optimizations"
 }
 
 main "$@"
