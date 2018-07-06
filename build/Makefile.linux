@@ -33,7 +33,6 @@ ICU_DATA_LIB=$(ICU)/source/lib/libicudata.a
 LZ4_LIB = $(LZ4)/liblz4.a
 PARQUET_CPP_LIB = $(PARQUET_CPP)/build/$(APACHE_BUILD)/libparquet.a
 SNAPPY_LIB = $(SNAPPY)/libsnappy.a
-SQLITE3_LIB = $(SQLITE)/libsqlite3.a
 THRIFT_LIB = $(PARQUET_CPP)/thrift_ep/src/thrift_ep-install/lib/libthrift.a
 ZLIB_LIB = $(ZLIB)/libz.a
 ZSTD_LIB = $(ZSTD)/libzstd.a
@@ -102,10 +101,7 @@ $(PARQUET_CPP):
 $(PARQUET_CPP_LIB): $(PARQUET_CPP) $(ARROW_LIB)
 	cd $(PARQUET_CPP) && make -j$(CPUS)
 
-$(SQLITE3_LIB):
-	cd $(ROOT) && ./build-sqlite
-
-.PHONY: clean arrow icu parquet publish_libs sqlite
+.PHONY: clean arrow icu parquet publish_libs
 
 clean:
 	rm -f *.o *.so
@@ -121,8 +117,5 @@ icu: $(ICU_I18N_LIB)
 parquet: $(PARQUET_CPP_LIB)
 
 publish_libs:
-	for lib in $(ALL_LIBS); do \
-		s3cmd put $$lib s3://cldellow/public/libparquet/$$(lsb_release -s -r)/; \
-	done
-
-sqlite: $(SQLITE3_LIB)
+	tar -cJf libs.tar.xz $(ALL_LIBS) $(SQLITE)/sqlite3
+	s3cmd put libs.tar.xz s3://cldellow/public/libparquet/$$(lsb_release -s -r)/libs.tar.xz
