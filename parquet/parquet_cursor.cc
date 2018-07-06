@@ -809,46 +809,36 @@ void ParquetCursor::ensureColumn(int col) {
     colRows[col] = rowId;
     wasNull = false;
 
+    bool hadValue = false;
     switch(types[col]) {
       case parquet::Type::INT32:
       {
         parquet::Int32Scanner* s = (parquet::Int32Scanner*)scanners[col].get();
         int rv = 0;
-        if(s->NextValue(&rv, &wasNull)) {
-          colIntValues[col] = rv;
-        } else {
-          throw std::invalid_argument("unexpectedly lacking a next value");
-        }
+        hadValue = s->NextValue(&rv, &wasNull);
+        colIntValues[col] = rv;
         break;
       }
       case parquet::Type::FLOAT:
       {
         parquet::FloatScanner* s = (parquet::FloatScanner*)scanners[col].get();
         float rv = 0;
-        if(s->NextValue(&rv, &wasNull)) {
-          colDoubleValues[col] = rv;
-        } else {
-          throw std::invalid_argument("unexpectedly lacking a next value");
-        }
+        hadValue = s->NextValue(&rv, &wasNull);
+        colDoubleValues[col] = rv;
         break;
       }
       case parquet::Type::DOUBLE:
       {
         parquet::DoubleScanner* s = (parquet::DoubleScanner*)scanners[col].get();
         double rv = 0;
-        if(s->NextValue(&rv, &wasNull)) {
-          colDoubleValues[col] = rv;
-        } else {
-          throw std::invalid_argument("unexpectedly lacking a next value");
-        }
+        hadValue = s->NextValue(&rv, &wasNull);
+        colDoubleValues[col] = rv;
         break;
       }
       case parquet::Type::BYTE_ARRAY:
       {
         parquet::ByteArrayScanner* s = (parquet::ByteArrayScanner*)scanners[col].get();
-        if(!s->NextValue(&colByteArrayValues[col], &wasNull)) {
-          throw std::invalid_argument("unexpectedly lacking a next value");
-        }
+        hadValue = s->NextValue(&colByteArrayValues[col], &wasNull);
         break;
       }
       case parquet::Type::INT96:
@@ -862,22 +852,16 @@ void ParquetCursor::ensureColumn(int col) {
         // (julian_day - 2440588) * (86400 * 1000 * 1000 * 1000) + nanoseconds
         parquet::Int96Scanner* s = (parquet::Int96Scanner*)scanners[col].get();
         parquet::Int96 rv {0, 0, 0};
-        if(s->NextValue(&rv, &wasNull)) {
-          colIntValues[col] = int96toMsSinceEpoch(rv);
-        } else {
-          throw std::invalid_argument("unexpectedly lacking a next value");
-        }
+        hadValue = s->NextValue(&rv, &wasNull);
+        colIntValues[col] = int96toMsSinceEpoch(rv);
         break;
       }
       case parquet::Type::INT64:
       {
         parquet::Int64Scanner* s = (parquet::Int64Scanner*)scanners[col].get();
         long rv = 0;
-        if(s->NextValue(&rv, &wasNull)) {
-          colIntValues[col] = rv;
-        } else {
-          throw std::invalid_argument("unexpectedly lacking a next value");
-        }
+        hadValue = s->NextValue(&rv, &wasNull);
+        colIntValues[col] = rv;
         break;
       }
 
@@ -885,24 +869,18 @@ void ParquetCursor::ensureColumn(int col) {
       {
         parquet::BoolScanner* s = (parquet::BoolScanner*)scanners[col].get();
         bool rv = false;
-        if(s->NextValue(&rv, &wasNull)) {
-          colIntValues[col] = rv ? 1 : 0;
-        } else {
-          throw std::invalid_argument("unexpectedly lacking a next value");
-        }
+        hadValue = s->NextValue(&rv, &wasNull);
+        colIntValues[col] = rv ? 1 : 0;
         break;
       }
       case parquet::Type::FIXED_LEN_BYTE_ARRAY:
       {
         parquet::FixedLenByteArrayScanner* s = (parquet::FixedLenByteArrayScanner*)scanners[col].get();
         parquet::FixedLenByteArray flba;
-        if(s->NextValue(&flba, &wasNull)) {
-          colByteArrayValues[col].ptr = flba.ptr;
-          // TODO: cache this
-          colByteArrayValues[col].len = rowGroupMetadata->schema()->Column(col)->type_length();
-        } else {
-          throw std::invalid_argument("unexpectedly lacking a next value");
-        }
+        hadValue = s->NextValue(&flba, &wasNull);
+        colByteArrayValues[col].ptr = flba.ptr;
+        // TODO: cache this
+        colByteArrayValues[col].len = rowGroupMetadata->schema()->Column(col)->type_length();
         break;
       }
       default:
@@ -914,6 +892,9 @@ void ParquetCursor::ensureColumn(int col) {
         throw std::invalid_argument(ss.str());
       break;
     }
+
+    if(!hadValue)
+      throw std::invalid_argument("unexpectedly lacking a next value");
 
     colNulls[col] = wasNull;
   }
