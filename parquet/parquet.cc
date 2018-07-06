@@ -461,14 +461,10 @@ ConstraintOperator constraintOperatorFromSqlite(int op) {
       return LessThan;
     case SQLITE_INDEX_CONSTRAINT_GE:
       return GreaterThanOrEqual;
-    case SQLITE_INDEX_CONSTRAINT_MATCH:
-      return Match;
     case SQLITE_INDEX_CONSTRAINT_LIKE:
       return Like;
     case SQLITE_INDEX_CONSTRAINT_GLOB:
       return Glob;
-    case SQLITE_INDEX_CONSTRAINT_REGEXP:
-      return Regexp;
     case SQLITE_INDEX_CONSTRAINT_NE:
       return NotEqual;
     case SQLITE_INDEX_CONSTRAINT_ISNOT:

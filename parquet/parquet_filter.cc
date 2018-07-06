@@ -61,17 +61,11 @@ std::string Constraint::describe() const {
     case GreaterThanOrEqual:
       rv.append(">=");
       break;
-    case Match:
-      rv.append("MATCH");
-      break;
     case Like:
       rv.append("LIKE");
       break;
     case Glob:
       rv.append("GLOB");
-      break;
-    case Regexp:
-      rv.append("REGEXP");
       break;
     case NotEqual:
       rv.append("<>");
