@@ -33,7 +33,7 @@ install_prerequisites() {
 
 build_sqlite() {
   if [ ! -e ../../sqlite/sqlite3 ]; then
-    make sqlite
+    ( cd "../.." && ./build-sqlite )
   fi
 }
 
@@ -61,13 +61,18 @@ add_prebuilt_lib() {
 }
 
 fetch_prebuilt_libs() {
-  for lib in "${libs[@]}"; do
-    if [ ! -e "$prebuilt/$lib" ]; then
-      echo "Fetching prebuilt $lib for Ubuntu $ubuntu"
-      curl "https://s3.amazonaws.com/cldellow/public/libparquet/$ubuntu/$lib" > tmp.a
-      mv tmp.a "$prebuilt"/$lib
-    fi
-  done
+  if [ ! -e "$prebuilt"/complete ]; then
+    (
+      cd "$prebuilt"
+      curl "https://s3.amazonaws.com/cldellow/public/libparquet/$ubuntu/libs.tar.xz" > libs.tar.xz
+      tar xf libs.tar.xz --xform 's#.*/##'
+      touch "$prebuilt"/complete
+    )
+  fi
+
+  if [ ! -e "$here"/sqlite/sqlite3 ]; then
+    ln -s "$prebuilt"/sqlite3 "$here"/sqlite/sqlite3
+  fi
 
   add_prebuilt_lib "PARQUET_CPP_LIB" libparquet
   add_prebuilt_lib "LZ4_LIB" liblz4
@@ -84,6 +89,7 @@ fetch_prebuilt_libs() {
   add_prebuilt_lib "BOOST_REGEX_LIB" libboost_regex
   add_prebuilt_lib "BOOST_SYSTEM_LIB" libboost_system
   add_prebuilt_lib "BOOST_FILESYSTEM_LIB" libboost_filesystem
+
 }
 
 main() {

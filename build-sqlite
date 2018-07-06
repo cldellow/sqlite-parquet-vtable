@@ -15,7 +15,10 @@ fetch_if_needed() {
 build() {
   cd sqlite
   ./configure
-  make -j$(nproc)
+
+  if [ ! -v PREBUILT ]; then
+    make -j$(nproc)
+  fi
 }
 
 main() {
