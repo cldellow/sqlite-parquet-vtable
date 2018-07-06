@@ -15,6 +15,7 @@ load_supported() {
 CREATE VIRTUAL TABLE test USING parquet('$file');
 SELECT * FROM test LIMIT 1;
 SELECT 123;
+DROP TABLE test;
 EOF
 }
 
