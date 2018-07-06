@@ -1,0 +1,31 @@
+#!/bin/bash
+set -euo pipefail
+
+# Verify that all the unsupported.*parquet files result in an error when creating the virtual table,
+# but don't segfault.
+
+load_bad_table() {
+  cat <<EOF
+.echo on
+.load build/linux/libparquet
+.testcase bad-create-table
+.bail on
+CREATE VIRTUAL TABLE test USING parquet;
+SELECT 123;
+EOF
+}
+
+main() {
+  root=$(dirname "${BASH_SOURCE[0]}")/..
+  root=$(readlink -f "$root")
+  cd "$root"
+
+  "$root"/sqlite/sqlite3 -init <(load_bad_table) < /dev/null > /dev/null 2> testcase-stderr.txt
+  # We expect the 'SELECT 123' command to NOT have been run
+  if grep -q 123 testcase-out.txt; then
+    echo "...FAILED; expected an error message. Check testcase-{out,err}.txt" >&2
+    exit 1
+  fi
+}
+
+main "$@"

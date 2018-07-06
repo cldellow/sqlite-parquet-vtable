@@ -5,6 +5,7 @@ here=$(dirname "${BASH_SOURCE[0]}")
 
 set -x
 "$here"/test-non-existent
+"$here"/test-bad-create-table
 "$here"/test-unsupported
 "$here"/test-supported
 "$here"/test-queries
