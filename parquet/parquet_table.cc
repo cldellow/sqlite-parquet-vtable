@@ -52,7 +52,16 @@ std::string ParquetTable::CreateStatement() {
     if(i > 0)
       text += ", ";
 
-    text += col->name();
+    text += "\"";
+    // Horrifically inefficient, but easy to understand.
+    std::string colName = col->name();
+    for(char& c : colName) {
+      if(c == '"')
+        text += "\"\"";
+      else
+        text += c;
+    }
+    text += "\"";
 
     std::string type;
 
