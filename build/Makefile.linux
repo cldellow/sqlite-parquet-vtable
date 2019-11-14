@@ -8,13 +8,15 @@ ARROW=$(HERE)/arrow
 ARROW_RELEASE=$(ARROW)/cpp/release
 BOOST_ROOT=$(ARROW_RELEASE)/boost_ep-prefix/src/boost_ep
 BOOST=$(BOOST_ROOT)/stage/lib
-BROTLI=$(ARROW_RELEASE)/brotli_ep/src/brotli_ep-install/lib/x86_64-linux-gnu
+
+BROTLI=$(PARQUET_CPP)/arrow_ep-prefix/src/arrow_ep-build/brotli_ep/src/brotli_ep-install/lib/x86_64-linux-gnu
 ICU=$(HERE)/icu
 LZ4=$(ARROW_RELEASE)/lz4_ep-prefix/src/lz4_ep/lib
 PARQUET_CPP=$(HERE)/parquet-cpp
 SNAPPY=$(ARROW_RELEASE)/snappy_ep/src/snappy_ep-install/lib
-ZLIB=$(ARROW_RELEASE)/zlib_ep/src/zlib_ep-install/lib
-ZSTD=$(ARROW_RELEASE)/zstd_ep-prefix/src/zstd_ep/lib
+
+ZLIB=$(PARQUET_CPP)/zlib_ep/src/zlib_ep-install/lib
+ZSTD=$(PARQUET_CPP)/arrow_ep-prefix/src/arrow_ep-build/zstd_ep-prefix/src/zstd_ep/lib
 
 # Libraries
 # profile_gen, profile_build for PGO
@@ -42,7 +44,7 @@ CC = gcc
 CXX = g++
 OPTIMIZATIONS = -O3
 CPUS:=$(shell nproc)
-CFLAGS = -I $(SQLITE) -I $(PARQUET_CPP)/src -I $(ARROW)/cpp/src $(OPTIMIZATIONS) -std=c++11 -Wall -fPIC -g
+CFLAGS = -I $(SQLITE) -I $(PARQUET_CPP)/arrow_ep-prefix/src/arrow_ep/cpp/src -I $(PARQUET_CPP)/src -I $(ARROW)/cpp/src $(OPTIMIZATIONS) -std=c++11 -Wall -fPIC -g
 
 ALL_LIBS = $(PARQUET_CPP_LIB) $(LZ4_LIB) $(ZSTD_LIB) $(THRIFT_LIB) $(SNAPPY_LIB) $(ARROW_LIB) \
 	  $(ICU_I18N_LIB) $(ICU_UC_LIB) $(ICU_DATA_LIB) \
@@ -74,7 +76,7 @@ parquet.o: $(VTABLE)/parquet.cc $(VTABLE)/parquet_cursor.h $(VTABLE)/parquet_tab
 $(ARROW):
 	rm -rf $(ARROW)
 	git clone https://github.com/apache/arrow.git $(ARROW)
-	cd $(ARROW) && git checkout apache-arrow-0.9.0
+	cd $(ARROW) && git checkout apache-arrow-0.15.1
 	mkdir $(ARROW)/cpp/release
 	cd $(ARROW)/cpp/release && cmake -DCMAKE_BUILD_TYPE=$(APACHE_BUILD) -DARROW_BOOST_VENDORED=ON -DARROW_BOOST_USE_SHARED=OFF -DPARQUET_BUILD_SHARED=OFF ..
 	touch -d @0 $(ARROW)
