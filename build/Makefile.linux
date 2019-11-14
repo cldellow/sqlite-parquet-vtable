@@ -44,7 +44,7 @@ CC = gcc
 CXX = g++
 OPTIMIZATIONS = -O3
 CPUS:=$(shell nproc)
-CFLAGS = -I $(SQLITE) -I $(PARQUET_CPP)/arrow_ep-prefix/src/arrow_ep/cpp/src -I $(PARQUET_CPP)/src -I $(ARROW)/cpp/src $(OPTIMIZATIONS) -std=c++11 -Wall -fPIC -g
+CFLAGS = -I $(SQLITE) -I $(ARROW)/cpp/src -I $(PARQUET_CPP)/arrow_ep-prefix/src/arrow_ep/cpp/src -I $(PARQUET_CPP)/src $(OPTIMIZATIONS) -std=c++11 -Wall -fPIC -g
 
 ALL_LIBS = $(PARQUET_CPP_LIB) $(LZ4_LIB) $(ZSTD_LIB) $(THRIFT_LIB) $(SNAPPY_LIB) $(ARROW_LIB) \
 	  $(ICU_I18N_LIB) $(ICU_UC_LIB) $(ICU_DATA_LIB) \

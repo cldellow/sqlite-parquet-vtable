@@ -775,6 +775,7 @@ void ParquetCursor::ensureColumn(int col) {
         case parquet::Type::INT64:
         {
           parquet::Int64Scanner* s = (parquet::Int64Scanner*)scanners[col].get();
+          //long rv = 0;
           long long rv = 0;
           s->NextValue(&rv, &wasNull);
           break;
@@ -859,6 +860,7 @@ void ParquetCursor::ensureColumn(int col) {
       case parquet::Type::INT64:
       {
         parquet::Int64Scanner* s = (parquet::Int64Scanner*)scanners[col].get();
+        //long rv = 0;
         long long rv = 0;
         hadValue = s->NextValue(&rv, &wasNull);
         colIntValues[col] = rv;
