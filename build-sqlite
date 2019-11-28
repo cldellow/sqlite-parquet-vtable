@@ -14,7 +14,7 @@ fetch_if_needed() {
 
 build() {
   cd sqlite
-  ./configure
+  ./configure --enable-readline
 
   if [ ! -v PREBUILT ]; then
     make -j$(nproc)
