@@ -13,7 +13,7 @@ class ParquetCursor {
   std::shared_ptr<parquet::RowGroupReader> rowGroup;
   std::vector<std::shared_ptr<parquet::Scanner>> scanners;
   std::vector<parquet::Type::type> types;
-  std::vector<parquet::LogicalType::type> logicalTypes;
+  std::vector<parquet::ConvertedType::type> logicalTypes;
 
   std::vector<int> colRows;
   std::vector<bool> colNulls;
@@ -37,17 +37,13 @@ class ParquetCursor {
   bool currentRowGroupSatisfiesFilter();
   bool currentRowGroupSatisfiesRowIdFilter(Constraint &constraint);
   bool currentRowGroupSatisfiesTextFilter(
-      Constraint &constraint,
-      std::shared_ptr<parquet::RowGroupStatistics> stats);
+      Constraint &constraint, std::shared_ptr<parquet::Statistics> stats);
   bool currentRowGroupSatisfiesBlobFilter(
-      Constraint &constraint,
-      std::shared_ptr<parquet::RowGroupStatistics> stats);
+      Constraint &constraint, std::shared_ptr<parquet::Statistics> stats);
   bool currentRowGroupSatisfiesIntegerFilter(
-      Constraint &constraint,
-      std::shared_ptr<parquet::RowGroupStatistics> stats);
+      Constraint &constraint, std::shared_ptr<parquet::Statistics> stats);
   bool currentRowGroupSatisfiesDoubleFilter(
-      Constraint &constraint,
-      std::shared_ptr<parquet::RowGroupStatistics> stats);
+      Constraint &constraint, std::shared_ptr<parquet::Statistics> stats);
 
   bool currentRowSatisfiesTextFilter(Constraint &constraint);
   bool currentRowSatisfiesIntegerFilter(Constraint &constraint);
@@ -67,7 +63,7 @@ public:
   unsigned int getNumConstraints() const;
   const Constraint &getConstraint(unsigned int i) const;
   parquet::Type::type getPhysicalType(int col);
-  parquet::LogicalType::type getLogicalType(int col);
+  parquet::ConvertedType::type getLogicalType(int col);
   ParquetTable *getTable() const;
 
   int getInt32(int col);
