@@ -1,9 +1,9 @@
 #ifndef PARQUET_FILTER_H
 #define PARQUET_FILTER_H
 
-#include <vector>
-#include <string>
 #include <cstdint>
+#include <string>
+#include <vector>
 
 enum ConstraintOperator {
   Equal,
@@ -20,43 +20,36 @@ enum ConstraintOperator {
   Is
 };
 
-enum ValueType {
-  Null,
-  Integer,
-  Double,
-  Blob,
-  Text
-};
+enum ValueType { Null, Integer, Double, Blob, Text };
 
 class RowGroupBitmap {
-  void setBit(std::vector<unsigned char>& membership, unsigned int rowGroup, bool isSet) {
+  void setBit(std::vector<unsigned char> &membership, unsigned int rowGroup,
+              bool isSet) {
     int byte = rowGroup / 8;
     int offset = rowGroup % 8;
     unsigned char c = membership[byte];
     c &= ~(1UL << offset);
-    if(isSet) {
+    if (isSet) {
       c |= 1UL << offset;
     }
     membership[byte] = c;
   }
-// Compares estimated rowGroupFilter results against observed results
-// when we explored the row group. This lets us cache 
+  // Compares estimated rowGroupFilter results against observed results
+  // when we explored the row group. This lets us cache
 public:
   RowGroupBitmap(unsigned int totalRowGroups) {
     // Initialize everything to assume that all row groups match.
     // As we discover otherwise, we'll update that assumption.
-    for(unsigned int i = 0; i < (totalRowGroups + 7) / 8; i++) {
+    for (unsigned int i = 0; i < (totalRowGroups + 7) / 8; i++) {
       estimatedMembership.push_back(0xFF);
       actualMembership.push_back(0xFF);
     }
   }
 
-  RowGroupBitmap(
-      std::vector<unsigned char> estimatedMembership,
-      std::vector<unsigned char> actualMembership) :
-    estimatedMembership(estimatedMembership),
-    actualMembership(actualMembership) {
-  }
+  RowGroupBitmap(std::vector<unsigned char> estimatedMembership,
+                 std::vector<unsigned char> actualMembership)
+      : estimatedMembership(estimatedMembership),
+        actualMembership(actualMembership) {}
 
   std::vector<unsigned char> estimatedMembership;
   std::vector<unsigned char> actualMembership;
@@ -80,17 +73,11 @@ public:
 
 class Constraint {
 public:
-  // Kind of a messy constructor function, but it's just for internal use, so whatever.
-  Constraint(
-    RowGroupBitmap bitmap,
-    int column,
-    std::string columnName,
-    ConstraintOperator op,
-    ValueType type,
-    int64_t intValue,
-    double doubleValue,
-    std::vector<unsigned char> blobValue
-  );
+  // Kind of a messy constructor function, but it's just for internal use, so
+  // whatever.
+  Constraint(RowGroupBitmap bitmap, int column, std::string columnName,
+             ConstraintOperator op, ValueType type, int64_t intValue,
+             double doubleValue, std::vector<unsigned char> blobValue);
 
   RowGroupBitmap bitmap;
   int column; // underlying column in the query

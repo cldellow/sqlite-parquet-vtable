@@ -1,13 +1,13 @@
 #ifndef PARQUET_CURSOR_H
 #define PARQUET_CURSOR_H
 
+#include "parquet/api/reader.h"
 #include "parquet_filter.h"
 #include "parquet_table.h"
-#include "parquet/api/reader.h"
 
 class ParquetCursor {
 
-  ParquetTable* table;
+  ParquetTable *table;
   std::unique_ptr<parquet::ParquetFileReader> reader;
   std::unique_ptr<parquet::RowGroupMetaData> rowGroupMetadata;
   std::shared_ptr<parquet::RowGroupReader> rowGroup;
@@ -35,19 +35,26 @@ class ParquetCursor {
 
   bool currentRowSatisfiesFilter();
   bool currentRowGroupSatisfiesFilter();
-  bool currentRowGroupSatisfiesRowIdFilter(Constraint& constraint);
-  bool currentRowGroupSatisfiesTextFilter(Constraint& constraint, std::shared_ptr<parquet::RowGroupStatistics> stats);
-  bool currentRowGroupSatisfiesBlobFilter(Constraint& constraint, std::shared_ptr<parquet::RowGroupStatistics> stats);
-  bool currentRowGroupSatisfiesIntegerFilter(Constraint& constraint, std::shared_ptr<parquet::RowGroupStatistics> stats);
-  bool currentRowGroupSatisfiesDoubleFilter(Constraint& constraint, std::shared_ptr<parquet::RowGroupStatistics> stats);
+  bool currentRowGroupSatisfiesRowIdFilter(Constraint &constraint);
+  bool currentRowGroupSatisfiesTextFilter(
+      Constraint &constraint,
+      std::shared_ptr<parquet::RowGroupStatistics> stats);
+  bool currentRowGroupSatisfiesBlobFilter(
+      Constraint &constraint,
+      std::shared_ptr<parquet::RowGroupStatistics> stats);
+  bool currentRowGroupSatisfiesIntegerFilter(
+      Constraint &constraint,
+      std::shared_ptr<parquet::RowGroupStatistics> stats);
+  bool currentRowGroupSatisfiesDoubleFilter(
+      Constraint &constraint,
+      std::shared_ptr<parquet::RowGroupStatistics> stats);
 
-  bool currentRowSatisfiesTextFilter(Constraint& constraint);
-  bool currentRowSatisfiesIntegerFilter(Constraint& constraint);
-  bool currentRowSatisfiesDoubleFilter(Constraint& constraint);
-
+  bool currentRowSatisfiesTextFilter(Constraint &constraint);
+  bool currentRowSatisfiesIntegerFilter(Constraint &constraint);
+  bool currentRowSatisfiesDoubleFilter(Constraint &constraint);
 
 public:
-  ParquetCursor(ParquetTable* table);
+  ParquetCursor(ParquetTable *table);
   int getRowId();
   void next();
   void close();
@@ -58,16 +65,15 @@ public:
   bool isNull(int col);
   unsigned int getNumRowGroups() const;
   unsigned int getNumConstraints() const;
-  const Constraint& getConstraint(unsigned int i) const;
+  const Constraint &getConstraint(unsigned int i) const;
   parquet::Type::type getPhysicalType(int col);
   parquet::LogicalType::type getLogicalType(int col);
-  ParquetTable* getTable() const;
+  ParquetTable *getTable() const;
 
   int getInt32(int col);
   long getInt64(int col);
   double getDouble(int col);
-  parquet::ByteArray* getByteArray(int col);
+  parquet::ByteArray *getByteArray(int col);
 };
 
 #endif
-
