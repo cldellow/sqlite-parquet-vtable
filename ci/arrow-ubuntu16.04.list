@@ -1,0 +1,1 @@
+deb [arch=amd64] https://dl.bintray.com/apache/arrow/ubuntu/ xenial main                                                                                                                    deb-src https://dl.bintray.com/apache/arrow/ubuntu/ xenial main

@@ -1,0 +1,6 @@
+[apache-arrow]
+name=Apache Arrow
+baseurl=https://dl.bintray.com/apache/arrow/centos/\$releasever/\$basearch/
+gpgcheck=1
+enabled=1
+gpgkey=https://dl.bintray.com/apache/arrow/centos/RPM-GPG-KEY-apache-arrow
