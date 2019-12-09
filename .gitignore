@@ -52,3 +52,5 @@ tests/queries
 /tests/results.bad_alloc
 /tests/libfailmalloc
 /build/linux
+
+builddir/
