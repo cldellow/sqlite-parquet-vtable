@@ -1,8 +1,0 @@
-#!/bin/bash
-set -euo pipefail
-
-sudo apt-get install software-properties-common
-sudo add-apt-repository --yes ppa:george-edison55/cmake-3.x
-sudo apt-get update
-COVERAGE=1 PREBUILT=1 ./make-linux
-COVERAGE=1 ./tests/test-all
