@@ -362,12 +362,17 @@ const char *opName(int op) {
     return ">=";
   case SQLITE_INDEX_CONSTRAINT_MATCH:
     return "match";
+#ifdef SQLITE_INDEX_CONSTRAINT_LIKE
+//SQLite version >= 3.10.0
   case SQLITE_INDEX_CONSTRAINT_LIKE:
     return "LIKE";
   case SQLITE_INDEX_CONSTRAINT_GLOB:
     return "GLOB";
   case SQLITE_INDEX_CONSTRAINT_REGEXP:
     return "REGEXP";
+#endif
+#ifdef SQLITE_INDEX_CONSTRAINT_NE
+//SQLite version >= 3.21.0
   case SQLITE_INDEX_CONSTRAINT_NE:
     return "!=";
   case SQLITE_INDEX_CONSTRAINT_ISNOT:
@@ -378,6 +383,7 @@ const char *opName(int op) {
     return "IS NULL";
   case SQLITE_INDEX_CONSTRAINT_IS:
     return "IS";
+#endif
   default:
     return "unknown";
   }
@@ -447,10 +453,15 @@ ConstraintOperator constraintOperatorFromSqlite(int op) {
     return LessThan;
   case SQLITE_INDEX_CONSTRAINT_GE:
     return GreaterThanOrEqual;
+#ifdef SQLITE_INDEX_CONSTRAINT_LIKE
+//SQLite version >= 3.10.0
   case SQLITE_INDEX_CONSTRAINT_LIKE:
     return Like;
   case SQLITE_INDEX_CONSTRAINT_GLOB:
     return Glob;
+#endif
+#ifdef SQLITE_INDEX_CONSTRAINT_NE
+//SQLite version >= 3.21.0
   case SQLITE_INDEX_CONSTRAINT_NE:
     return NotEqual;
   case SQLITE_INDEX_CONSTRAINT_ISNOT:
@@ -461,6 +472,7 @@ ConstraintOperator constraintOperatorFromSqlite(int op) {
     return IsNull;
   case SQLITE_INDEX_CONSTRAINT_IS:
     return Is;
+#endif
   }
 
   std::ostringstream ss;
