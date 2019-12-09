@@ -1,6 +1,6 @@
 project('sqlite-parquet-vtable', 'c', 'cpp', default_options:['c_std=c11', 'cpp_std=c++11'])
-parquet = dependency('parquet')
-sqlite = dependency('sqlite3')
+parquet = dependency('parquet', version: '1.5.1')
+sqlite = dependency('sqlite3', version: '>=3.21.0')
 icu = dependency('icu-i18n')
 shared_library('sqlite-parquet-vtable', 
 	dependencies:[parquet, sqlite, icu],
