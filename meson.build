@@ -11,7 +11,7 @@ shared_library('parquet',
 	sources: sources 
 )
 
-test('Load the extension', find_program('tests/test-smoke'))
-test('Try loading an unsupported file', find_program('tests/test-bad-create-table'))
-test('Try loading a non-existent file', find_program('tests/test-non-existent'))
+subdir('tests')
+#test('Try loading a non-existent file', find_program('tests/test-non-existent'))
+#test('Try loading an unsupported file', find_program('tests/test-bad-create-table'))
 
