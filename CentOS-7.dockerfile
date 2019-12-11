@@ -5,4 +5,8 @@ COPY ci/arrow-centos.repo /etc/yum.repos.d/Apache-Arrow.repo
 RUN yum install -y parquet-devel
 WORKDIR /src
 COPY . /src
-RUN mkdir builddir && meson builddir && cd builddir && ninja-build
+RUN mkdir builddir && meson builddir
+WORKDIR builddir
+RUN meson configure -Db_pgo=generate && ninja-build
+RUN ninja-build test
+#RUN meson configure -Db_pgo=use && ninja-build

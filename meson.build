@@ -6,11 +6,12 @@ icu = dependency('icu-i18n', version: '>=50.2')
 
 dependencies = [arrow, parquet, sqlite, icu]
 sources = ['src/parquet.cc', 'src/parquet_cursor.cc', 'src/parquet_filter.cc', 'src/parquet_table.cc']
-static_library('sqlite-parquet-vtable-static', 
+shared_library('parquet', 
 	dependencies: dependencies,
 	sources: sources 
 )
-shared_library('sqlite-parquet-vtable', 
-	dependencies: dependencies,
-	sources: sources 
-)
+
+test('Load the extension', find_program('tests/test-smoke'))
+test('Try loading an unsupported file', find_program('tests/test-bad-create-table'))
+test('Try loading a non-existent file', find_program('tests/test-non-existent'))
+
