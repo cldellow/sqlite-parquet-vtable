@@ -40,13 +40,13 @@ build_sqlite() {
 set_icu_version() {
   case "$ubuntu" in
     14.04)
-      export ICU_VERSION=52.1
+      export ICU_VERSION=52-1
       ;;
     16.04)
-      export ICU_VERSION=55.1
+      export ICU_VERSION=55-1
       ;;
     18.04)
-      export ICU_VERSION=60.2
+      export ICU_VERSION=60-2
       ;;
     *)
     echo "unsure what libicu version to use" >&2
