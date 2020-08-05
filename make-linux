@@ -53,7 +53,7 @@ set_icu_version() {
     exit 1
   esac
 
-  export ICU_VERSION_U=${ICU_VERSION//./_}
+  export ICU_VERSION_U=${ICU_VERSION//-/_}
 }
 
 add_prebuilt_lib() {
