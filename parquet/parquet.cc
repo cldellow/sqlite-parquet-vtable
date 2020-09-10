@@ -29,9 +29,9 @@ SQLITE_EXTENSION_INIT1
 
 /* Forward references to the various virtual table methods implemented
  * in this file. */
-static int parquetCreate(sqlite3*, void*, int, const char*const*, 
+static int parquetCreate(sqlite3*, void*, int, const char*const*,
                            sqlite3_vtab**,char**);
-static int parquetConnect(sqlite3*, void*, int, const char*const*, 
+static int parquetConnect(sqlite3*, void*, int, const char*const*,
                            sqlite3_vtab**,char**);
 static int parquetBestIndex(sqlite3_vtab*,sqlite3_index_info*);
 static int parquetDisconnect(sqlite3_vtab*);
@@ -290,7 +290,7 @@ static int parquetColumn(
         case parquet::Type::BYTE_ARRAY:
         {
           parquet::ByteArray* rv = cursor->getByteArray(col);
-          if(cursor->getLogicalType(col) == parquet::LogicalType::UTF8) {
+          if(cursor->getLogicalType(col) == parquet::ConvertedType::UTF8) {
             sqlite3_result_text(ctx, (const char*)rv->ptr, rv->len, SQLITE_TRANSIENT);
           } else {
             sqlite3_result_blob(ctx, (void*)rv->ptr, rv->len, SQLITE_TRANSIENT);
@@ -336,7 +336,7 @@ static int parquetColumn(
 */
 static int parquetRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid){
   ParquetCursor *cursor = ((sqlite3_vtab_cursor_parquet*)cur)->cursor;
-  *pRowid = cursor->getRowId(); 
+  *pRowid = cursor->getRowId();
   return SQLITE_OK;
 }
 
@@ -741,15 +741,15 @@ static sqlite3_module ParquetModule = {
   0,                       /* xRename */
 };
 
-/* 
+/*
 * This routine is called when the extension is loaded.  The new
 * Parquet virtual table module is registered with the calling database
 * connection.
 */
 extern "C" {
   int sqlite3_parquet_init(
-    sqlite3 *db, 
-    char **pzErrMsg, 
+    sqlite3 *db,
+    char **pzErrMsg,
     const sqlite3_api_routines *pApi
   ){
     int rc;
