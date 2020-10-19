@@ -290,7 +290,7 @@ static int parquetColumn(
         case parquet::Type::BYTE_ARRAY:
         {
           parquet::ByteArray* rv = cursor->getByteArray(col);
-          if(cursor->getLogicalType(col) == parquet::LogicalType::UTF8) {
+          if(cursor->getConvertedType(col) == parquet::ConvertedType::UTF8) {
             sqlite3_result_text(ctx, (const char*)rv->ptr, rv->len, SQLITE_TRANSIENT);
           } else {
             sqlite3_result_blob(ctx, (void*)rv->ptr, rv->len, SQLITE_TRANSIENT);
