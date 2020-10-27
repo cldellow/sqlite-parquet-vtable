@@ -21,7 +21,7 @@ install_prerequisites() {
   sudo apt install -y -V ./apache-arrow-archive-keyring-latest-focal.deb
   sudo apt update -y
   sudo apt install -y -V libparquet-dev liblz4-dev libzstd-dev libthrift-dev \
-    libsnappy-dev libthrift-dev libbrotli-dev libz-dev
+    libsnappy-dev libbrotli-dev libz-dev
 
   # Install prereqs based on https://github.com/apache/parquet-cpp#linux
   sudo apt install -y libboost-dev g++ libboost-filesystem-dev \
