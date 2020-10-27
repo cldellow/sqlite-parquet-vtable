@@ -5,7 +5,7 @@ apt install -y sudo lsb-release wget
 
 here=$(dirname "${BASH_SOURCE[0]}")
 here=$(readlink -f "$here")
-ubuntu="$(lsb_release -s -r)"
+distro="$(lsb_release -s -r)"
 
 setup_directories() {
   cd "$here"
@@ -14,7 +14,17 @@ setup_directories() {
   cd build/linux
 }
 
-install_prerequisites() {
+install_prerequisites_amazon_linux() {
+  # Install Apache Arrow <https://arrow.apache.org/install/> and dependencies.
+  sudo yum update -y
+  sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+  sudo yum install -y https://apache.bintray.com/arrow/centos/7/apache-arrow-release-latest.rpm
+  sudo yum install -y --enablerepo=epel parquet-devel
+  sudo yum install -y lz4-devel thrift-devel libzstd-devel snappy-devel brotli-devel boost-devel boost-static libicu-devel openssl-devel
+  export CFLAGS=-D_GLIBCXX_USE_CXX11_ABI=0
+}
+
+install_prerequisites_ubuntu() {
   # install Apache Arrow libs
   # NOTE: Pinned to Ubuntu Focal
   wget https://apache.bintray.com/arrow/ubuntu/apache-arrow-archive-keyring-latest-focal.deb
@@ -43,7 +53,7 @@ build_sqlite() {
 }
 
 set_icu_version() {
-  case "$ubuntu" in
+  case "$distro" in
     14.04)
       export ICU_VERSION=52-1
       ;;

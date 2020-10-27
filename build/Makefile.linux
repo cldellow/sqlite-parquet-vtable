@@ -6,7 +6,7 @@ SQLITE:=$(ROOT)/sqlite
 # Flags
 CXX = g++
 OPTIMIZATIONS = -O3
-CFLAGS = -I $(SQLITE) $(OPTIMIZATIONS) -std=c++11 -Wall -fPIC -g
+CFLAGS = $CFLAGS -I $(SQLITE) $(OPTIMIZATIONS) -std=c++11 -Wall -fPIC -g
 LIBS = -lparquet -lboost_regex -lboost_system -lboost_filesystem \
 	-lbrotlienc -lbrotlicommon -lbrotlidec -licui18n -licuuc -licudata \
 	-llz4 -lsnappy -lthrift -lz -lzstd -lcrypto -lssl
